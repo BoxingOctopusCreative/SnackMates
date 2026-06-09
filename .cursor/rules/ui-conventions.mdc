@@ -1,0 +1,47 @@
+---
+description: SnackMates UI conventions for icons and headings
+alwaysApply: true
+---
+
+# UI Conventions
+
+## Icons
+
+When adding icons, use the **IonIcons** set via **Iconify** (`@iconify/react`).
+
+```tsx
+import { Icon } from "@iconify/react";
+
+<Icon icon="ion:heart-outline" aria-hidden />
+```
+
+- Use the `ion:` prefix (e.g. `ion:add`, `ion:add-outline`, `ion:close`, `ion:pencil-outline`).
+- Prefer outline icons by default; use filled variants on hover/active when matching existing patterns (`HeaderIconLink`, `HeroIconButton`).
+- Do not use other Iconify sets (e.g. `mdi:`, `lucide:`, `fa6:`) or ad-hoc SVGs unless the user explicitly requests otherwise.
+
+## Headings and Subheadings
+
+Static UI headings and subheadings use **Title Case**.
+
+Applies to:
+- `Heading` components and `h1`–`h6`
+- Page hero titles (`PageHero` `title`)
+- Modal titles (`AppModal` `title`)
+- Table column headers and stat-card labels that act as section titles
+- Illustrated-message / section headings
+
+Examples:
+- "Add Snack", "Account Settings", "Quick Actions", "Snack Name"
+- Articles/prepositions stay lowercase when appropriate: "Create a Wishlist", "Sign In to SnackMates"
+
+Do **not** Title Case user-generated content (wishlist titles, display names, bios, descriptions).
+
+Body text, button labels, and form field labels are sentence case unless they are clearly headings.
+
+## Theme / Appearance
+
+Light/dark mode controls belong **only** in the profile dropdown (`UserMenu` → Appearance section).
+
+- Do **not** add floating `ThemeSwitcher` controls to authenticated app pages (dashboard, messages, wishlists, etc.).
+- `ConditionalThemeSwitcher` uses an allowlist of public utility routes only; new `(app)` routes must not be added there.
+- If a page renders inside `AppShell`, theme toggles come from the profile menu — nowhere else.

@@ -1,0 +1,112 @@
+/* Adobe Fonts kit: https://use.typekit.net/mtj8rsn.css */
+:root {
+  --sm-font-body: "forma-djr-deck-n4", "forma-djr-deck", sans-serif;
+  --sm-font-body-strong: "forma-djr-deck-n7", "forma-djr-deck", sans-serif;
+  --sm-font-heading-strong: "finalsix-n6", "finalsix", sans-serif;
+  --sm-font-heading: "finalsix-n5", "finalsix", sans-serif;
+  --sm-font-display: "hobeaux-n9", "hobeaux", sans-serif;
+}
+
+html,
+body {
+  font-family: var(--sm-font-body);
+  font-weight: 400;
+}
+
+h1 {
+  font-family: var(--sm-font-display);
+  font-weight: 900;
+}
+
+h2,
+h3 {
+  font-family: var(--sm-font-heading-strong);
+  font-weight: 600;
+}
+
+h4,
+h5,
+h6 {
+  font-family: var(--sm-font-heading);
+  font-weight: 500;
+}
+
+.sm-theme {
+  font-family: var(--sm-font-body);
+  font-weight: 400;
+  --spectrum-global-font-weight-bold: 700;
+  --spectrum-button-primary-text-font-weight: 700;
+  --spectrum-actionbutton-text-font-weight: 700;
+  --spectrum-actionbutton-quiet-text-font-weight: 700;
+  --spectrum-logicbutton-and-text-font-weight: 700;
+}
+
+.sm-theme h1 {
+  font-family: var(--sm-font-display);
+  font-weight: 900;
+}
+
+.sm-theme h2,
+.sm-theme h3 {
+  font-family: var(--sm-font-heading-strong);
+  font-weight: 600;
+}
+
+.sm-theme h4,
+.sm-theme h5,
+.sm-theme h6 {
+  font-family: var(--sm-font-heading);
+  font-weight: 500;
+}
+
+.sm-theme button,
+.sm-theme [class*="spectrum-Button"],
+.sm-theme [class*="spectrum-ActionButton"],
+.sm-theme [class*="spectrum-ButtonGroup-Button"],
+.sm-theme [class*="spectrum-Button-label"],
+.sm-theme [class*="spectrum-ActionButton-label"] {
+  font-family: var(--sm-font-body-strong) !important;
+  font-weight: 700 !important;
+}
+
+.sm-theme [class*="spectrum-Button"] {
+  width: auto !important;
+  max-width: 100%;
+  align-self: flex-start;
+  flex: 0 0 auto;
+}
+
+.sm-theme input,
+.sm-theme textarea,
+.sm-theme select,
+.sm-theme label,
+.sm-theme [class*="spectrum-Text"],
+.sm-theme [class*="spectrum-FieldLabel"] {
+  font-family: inherit;
+}
+
+.sm-user-menu [class*="spectrum-Menu-itemLabel"],
+.sm-user-menu [class*="spectrum-Menu-sectionHeading"],
+.sm-user-menu [class*="i18nFontFamily"],
+.sm-user-menu [class*="spectrum-Text"],
+.sm-user-menu .sm-header-dropdown__item {
+  font-family: var(--sm-font-body) !important;
+}
+
+.sm-user-menu [class*="spectrum-Menu-itemLabel"],
+.sm-user-menu .sm-header-dropdown__item {
+  font-weight: 400 !important;
+}
+
+.sm-user-menu [class*="spectrum-Menu-sectionHeading"],
+.sm-user-menu .sm-header-dropdown__section-heading {
+  font-family: var(--sm-font-body-strong) !important;
+  font-weight: 700 !important;
+}
+
+.sm-user-menu [class*="spectrum-Menu-section--noHeading"] [class*="spectrum-Menu-itemLabel"],
+.sm-user-menu .sm-header-dropdown__item--danger {
+  font-family: var(--sm-font-body-strong) !important;
+  font-weight: 700 !important;
+  color: var(--sm-error) !important;
+}

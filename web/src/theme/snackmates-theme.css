@@ -1,0 +1,185 @@
+/* Brand primitives — use directly only for intentional brand moments */
+:root {
+  --sm-toffee-gold: #edc21d;
+  --sm-strawberry-red: #d4382b;
+  --sm-cocoa-brown: #47120e;
+  --sm-content-max-width: 1400px;
+  --sm-main-content-max-width: calc(var(--sm-content-max-width) * 0.85);
+}
+
+/* Default before hydration script runs */
+html:not([data-theme]) {
+  --sm-bg: #fffcf5;
+  --sm-bg-subtle: #fff6dc;
+  --sm-surface: #ffffff;
+  --sm-surface-raised: #ffffff;
+  --sm-text: #1e1a18;
+  --sm-text-muted: #5c5650;
+  --sm-text-inverse: #ffffff;
+  --sm-border: #e4e0d8;
+  --sm-accent: #d4382b;
+  --sm-accent-hover: #b82e22;
+  --sm-accent-muted: #fceae8;
+  --sm-highlight: #edc21d;
+  --sm-highlight-muted: #fff3bf;
+  --sm-header-bg: #d4382b;
+  --sm-header-text: #ffffff;
+  --sm-header-accent: #edc21d;
+  --sm-error: #d4382b;
+}
+
+/* ── Light: bright cream surfaces, neutral text, strawberry chrome ── */
+html[data-theme="light"] {
+  color-scheme: light;
+  --sm-bg: #fffcf5;
+  --sm-bg-subtle: #fff6dc;
+  --sm-surface: #ffffff;
+  --sm-surface-raised: #ffffff;
+  --sm-text: #1e1a18;
+  --sm-text-muted: #5c5650;
+  --sm-text-inverse: #ffffff;
+  --sm-border: #e4e0d8;
+  --sm-accent: #d4382b;
+  --sm-accent-hover: #b82e22;
+  --sm-accent-muted: #fceae8;
+  --sm-highlight: #edc21d;
+  --sm-highlight-muted: #fff3bf;
+  --sm-header-bg: #d4382b;
+  --sm-header-text: #ffffff;
+  --sm-header-accent: #edc21d;
+  --sm-error: #d4382b;
+
+  --spectrum-gray-50: #ffffff;
+  --spectrum-gray-75: #fffcf5;
+  --spectrum-gray-100: #f5f4f0;
+  --spectrum-gray-200: #e8e6e1;
+  --spectrum-gray-300: #d4d2cc;
+  --spectrum-gray-400: #a8a59e;
+  --spectrum-gray-500: #7a7770;
+  --spectrum-gray-600: #5c5954;
+  --spectrum-gray-700: #43403c;
+  --spectrum-gray-800: #2d2a27;
+  --spectrum-gray-900: #1e1a18;
+}
+
+/* ── Dark: true charcoal surfaces, cream text, gold + red accents ── */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --sm-bg: #0e0e0e;
+  --sm-bg-subtle: #161616;
+  --sm-surface: #1c1c1c;
+  --sm-surface-raised: #262626;
+  --sm-text: #f2f0eb;
+  --sm-text-muted: #9a9690;
+  --sm-text-inverse: #0e0e0e;
+  --sm-border: #333333;
+  --sm-accent: #f06a5e;
+  --sm-accent-hover: #ff8578;
+  --sm-accent-muted: #3a1814;
+  --sm-highlight: #edc21d;
+  --sm-highlight-muted: #3d3410;
+  --sm-header-bg: #121212;
+  --sm-header-text: #f2f0eb;
+  --sm-header-accent: #edc21d;
+  --sm-error: #f06a5e;
+
+  --spectrum-gray-50: #0e0e0e;
+  --spectrum-gray-75: #121212;
+  --spectrum-gray-100: #161616;
+  --spectrum-gray-200: #1c1c1c;
+  --spectrum-gray-300: #2a2a2a;
+  --spectrum-gray-400: #444444;
+  --spectrum-gray-500: #6b6b6b;
+  --spectrum-gray-600: #8f8f8f;
+  --spectrum-gray-700: #b0b0aa;
+  --spectrum-gray-800: #d4d4d0;
+  --spectrum-gray-900: #f2f0eb;
+}
+
+/* React Spectrum — light: neutral greys, brand only in accent + notice */
+html[data-theme="light"] .sm-theme[class*="spectrum--light"],
+.sm-theme[class*="spectrum--light"] {
+  --spectrum-red-100: #fceae8;
+  --spectrum-red-200: #f9d4d1;
+  --spectrum-red-300: #f4b5b0;
+  --spectrum-red-400: #ec9089;
+  --spectrum-red-500: #e3635a;
+  --spectrum-red-600: #d4382b;
+  --spectrum-red-700: #b82e22;
+  --spectrum-red-800: #9c261d;
+  --spectrum-red-900: #d4382b;
+  --spectrum-red-1000: #b82e22;
+  --spectrum-red-1100: #9c261d;
+
+  --spectrum-accent-color-100: #fceae8;
+  --spectrum-accent-color-200: #f9d4d1;
+  --spectrum-accent-color-300: #f4b5b0;
+  --spectrum-accent-color-400: #ec9089;
+  --spectrum-accent-color-500: #e3635a;
+  --spectrum-accent-color-600: #d4382b;
+  --spectrum-accent-color-700: #b82e22;
+  --spectrum-accent-color-800: #9c261d;
+  --spectrum-accent-color-900: #d4382b;
+  --spectrum-accent-color-1000: #b82e22;
+  --spectrum-accent-color-1100: #9c261d;
+
+  --spectrum-yellow-100: #fff8d6;
+  --spectrum-yellow-200: #fff0a8;
+  --spectrum-yellow-300: #f7e060;
+  --spectrum-yellow-400: #edc21d;
+  --spectrum-yellow-500: #d4ad0f;
+  --spectrum-yellow-600: #b89408;
+  --spectrum-yellow-700: #9a7b06;
+  --spectrum-yellow-800: #7c6305;
+  --spectrum-yellow-900: #5f4b04;
+
+  --spectrum-semantic-negative-color-default: #d4382b;
+  --spectrum-semantic-negative-color-text-large: #d4382b;
+  --spectrum-semantic-negative-color-text-small: #b82e22;
+  --spectrum-semantic-notice-color-default: #9a7b06;
+  --spectrum-semantic-notice-color-background: #edc21d;
+}
+
+/* React Spectrum — dark: neutral charcoal greys, vivid accent + gold */
+html[data-theme="dark"] .sm-theme[class*="spectrum--darkest"],
+.sm-theme[class*="spectrum--darkest"] {
+  --spectrum-red-100: #3a1410;
+  --spectrum-red-200: #4e1c16;
+  --spectrum-red-300: #66241c;
+  --spectrum-red-400: #802d24;
+  --spectrum-red-500: #9c382c;
+  --spectrum-red-600: #b84234;
+  --spectrum-red-700: #d4382b;
+  --spectrum-red-800: #e85548;
+  --spectrum-red-900: #f06a5e;
+  --spectrum-red-1000: #ff8578;
+  --spectrum-red-1100: #ffa098;
+
+  --spectrum-accent-color-100: #3a1410;
+  --spectrum-accent-color-200: #4e1c16;
+  --spectrum-accent-color-300: #66241c;
+  --spectrum-accent-color-400: #802d24;
+  --spectrum-accent-color-500: #9c382c;
+  --spectrum-accent-color-600: #b84234;
+  --spectrum-accent-color-700: #d4382b;
+  --spectrum-accent-color-800: #e85548;
+  --spectrum-accent-color-900: #f06a5e;
+  --spectrum-accent-color-1000: #ff8578;
+  --spectrum-accent-color-1100: #ffa098;
+
+  --spectrum-yellow-100: #2a2408;
+  --spectrum-yellow-200: #3d3410;
+  --spectrum-yellow-300: #5c4c12;
+  --spectrum-yellow-400: #8a7214;
+  --spectrum-yellow-500: #b89408;
+  --spectrum-yellow-600: #d4ad0f;
+  --spectrum-yellow-700: #edc21d;
+  --spectrum-yellow-800: #f2d555;
+  --spectrum-yellow-900: #f7e48a;
+
+  --spectrum-semantic-negative-color-default: #f06a5e;
+  --spectrum-semantic-negative-color-text-large: #f06a5e;
+  --spectrum-semantic-negative-color-text-small: #ffa098;
+  --spectrum-semantic-notice-color-default: #edc21d;
+  --spectrum-semantic-notice-color-background: #5c4c12;
+}

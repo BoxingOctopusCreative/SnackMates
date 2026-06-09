@@ -1,0 +1,76 @@
+# SnackMates API configuration (optional).
+# By default the API reads environment variables. To use this file:
+#   CONFIG_FILE=config.toml go run ./cmd/server
+# or:
+#   go run ./cmd/server --config config.toml
+#   go run ./cmd/server -c config.toml
+#
+# Environment variables always override values set here.
+
+[server]
+port = "8080"
+base_url = "http://localhost:8080"
+web_origin = "http://localhost:3000"
+jwt_secret = "change-me-in-production-use-a-long-random-string"
+
+[database]
+url = "postgres://snackmates:snackmates@localhost:5432/snackmates?sslmode=disable"
+
+[valkey]
+url = "redis://localhost:6379/0"
+
+[meilisearch]
+url = "http://localhost:7700"
+api_key = "snackmates-dev-master-key"
+
+[s3]
+# Cloudflare R2 example:
+# endpoint = "https://<account_id>.r2.cloudflarestorage.com"
+# region = "auto"
+endpoint = "http://localhost:9000"
+region = "us-east-1"
+access_key = "snackmates"
+secret_key = "snackmates-dev"
+client_assets_bucket = "client-assets"
+static_assets_bucket = "static-assets"
+use_path_style = true
+# public_base_url = "https://static.example.com"
+presign_private_objects = true
+presign_expiry_seconds = 3600
+
+[email]
+provider = "smtp"
+from = "noreply@snackmates.local"
+
+[smtp]
+host = "localhost"
+port = 1025
+
+[mailgun]
+# api_key = ""
+# domain = "mg.example.com"
+# EU accounts: api_base_url = "https://api.eu.mailgun.net"
+# api_base_url = "https://api.mailgun.net"
+
+[discord]
+client_id = ""
+client_secret = ""
+redirect_uri = "http://localhost:8080/api/v1/auth/discord/callback"
+
+[webauthn]
+rp_id = "localhost"
+rp_origin = "http://localhost:3000"
+rp_name = "SnackMates"
+
+[anthropic]
+# api_key = ""
+# model = "claude-haiku-4-5-20251001"
+
+[ovh_ai]
+# access_token = ""
+# model = "Mistral-Nemo-Instruct-2407"
+# base_url = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"
+
+[openfoodfacts]
+# search_url = "https://search.openfoodfacts.org"
+# base_url = "https://ca.openfoodfacts.org"

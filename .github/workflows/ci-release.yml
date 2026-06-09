@@ -1,0 +1,318 @@
+name: CI and release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-skip:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.skip.outputs.should_skip }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for CI or INFO commit prefix
+        id: skip
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if [[ "$COMMIT_MSG" =~ ^(CI|INFO): ]]; then
+            echo "should_skip=true" >> "$GITHUB_OUTPUT"
+            echo "Commit starts with CI/INFO. Skipping build/release."
+          else
+            echo "should_skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  unit-tests:
+    needs: [check-skip]
+    if: needs.check-skip.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+
+      - name: API unit tests
+        working-directory: api
+        run: go test ./... -count=1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Web unit tests
+        working-directory: web
+        run: npm ci && npm test
+
+  release:
+    needs: [unit-tests, check-skip]
+    # Ensure it only runs if tests passed AND skip wasn't triggered
+    if: |
+      needs.check-skip.outputs.should_skip != 'true' &&
+      github.ref == 'refs/heads/main' && 
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Lowercase owner for GHCR
+        id: ns
+        run: echo "owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: "Bump SemVer tag"
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: main
+          default_bump: patch
+          # Explicitly mapping CI and INFO to null/none just in case, 
+          # though the job 'if' condition should prevent this step from running anyway.
+          custom_release_rules: "MAJOR:major,MINOR:minor,PATCH:patch,CI:none,INFO:none"
+
+      - uses: actions/setup-go@v5
+        if: steps.tag_version.outputs.new_tag != ''
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+
+      - name: Build API binaries
+        if: steps.tag_version.outputs.new_tag != ''
+        working-directory: api
+        env:
+          VERSION: ${{ steps.tag_version.outputs.new_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/dist"
+          for spec in linux,amd64 linux,arm64 darwin,amd64 darwin,arm64; do
+            goos=${spec%,*}
+            goarch=${spec#*,}
+            out="${GITHUB_WORKSPACE}/dist/kurator-api-${VERSION}-${goos}-${goarch}"
+            CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -trimpath -ldflags="-s -w" -o "$out" ./cmd/api
+            chmod +x "$out"
+          done
+
+      - name: Create GitHub Release
+        if: steps.tag_version.outputs.new_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          generate_release_notes: true
+          files: dist/kurator-api-*
+
+      - name: Upload release binaries
+        if: steps.tag_version.outputs.new_tag != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: kurator-api-binaries-${{ steps.tag_version.outputs.new_tag }}
+          path: dist/kurator-api-*
+
+      # Publishes `web/content/privacy-policy.md` into the shared asset bucket (same S3_* as production; key: legal/privacy-policy.md).
+      # Secrets: S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY. Optional: S3_ENDPOINT, S3_REGION (default us-east-1 here).
+      - name: Publish privacy policy markdown to S3
+        if: steps.tag_version.outputs.new_tag != ''
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ vars.S3_REGION }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${S3_BUCKET:-}" ]]; then
+            echo "S3_BUCKET secret not set; skipping privacy policy upload."
+            exit 0
+          fi
+          if [[ -z "${S3_ACCESS_KEY_ID:-}" || -z "${S3_SECRET_ACCESS_KEY:-}" ]]; then
+            echo "S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY not set; skipping privacy policy upload."
+            exit 0
+          fi
+          REGION="${S3_REGION:-us-east-1}"
+          DEST_KEY="legal/privacy-policy.md"
+          ENDPOINT_ARGS=()
+          if [[ -n "${S3_ENDPOINT:-}" ]]; then
+            ENDPOINT_ARGS=(--endpoint-url "${S3_ENDPOINT}")
+          fi
+          export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY"
+          aws s3 cp "${ENDPOINT_ARGS[@]}" --region "$REGION" web/content/privacy-policy.md "s3://${S3_BUCKET}/${DEST_KEY}"
+
+      # Publishes `web/content/terms-of-use.md` into the shared asset bucket (key: legal/terms-of-use.md).
+      - name: Publish terms of use markdown to S3
+        if: steps.tag_version.outputs.new_tag != ''
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ vars.S3_REGION }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${S3_BUCKET:-}" ]]; then
+            echo "S3_BUCKET secret not set; skipping terms of use upload."
+            exit 0
+          fi
+          if [[ -z "${S3_ACCESS_KEY_ID:-}" || -z "${S3_SECRET_ACCESS_KEY:-}" ]]; then
+            echo "S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY not set; skipping terms of use upload."
+            exit 0
+          fi
+          REGION="${S3_REGION:-us-east-1}"
+          DEST_KEY="legal/terms-of-use.md"
+          ENDPOINT_ARGS=()
+          if [[ -n "${S3_ENDPOINT:-}" ]]; then
+            ENDPOINT_ARGS=(--endpoint-url "${S3_ENDPOINT}")
+          fi
+          export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY"
+          aws s3 cp "${ENDPOINT_ARGS[@]}" --region "$REGION" web/content/terms-of-use.md "s3://${S3_BUCKET}/${DEST_KEY}"
+
+      # Publishes `web/content/sitemap.md` into the shared asset bucket (key: legal/sitemap.md).
+      - name: Publish sitemap markdown to S3
+        if: steps.tag_version.outputs.new_tag != ''
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ vars.S3_REGION }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${S3_BUCKET:-}" ]]; then
+            echo "S3_BUCKET secret not set; skipping sitemap upload."
+            exit 0
+          fi
+          if [[ -z "${S3_ACCESS_KEY_ID:-}" || -z "${S3_SECRET_ACCESS_KEY:-}" ]]; then
+            echo "S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY not set; skipping sitemap upload."
+            exit 0
+          fi
+          REGION="${S3_REGION:-us-east-1}"
+          DEST_KEY="legal/sitemap.md"
+          ENDPOINT_ARGS=()
+          if [[ -n "${S3_ENDPOINT:-}" ]]; then
+            ENDPOINT_ARGS=(--endpoint-url "${S3_ENDPOINT}")
+          fi
+          export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY"
+          aws s3 cp "${ENDPOINT_ARGS[@]}" --region "$REGION" web/content/sitemap.md "s3://${S3_BUCKET}/${DEST_KEY}"
+
+      # Publishes `web/content/landing-slogans.md` into the shared asset bucket (key: marketing/landing-slogans.md).
+      - name: Publish landing slogans markdown to S3
+        if: steps.tag_version.outputs.new_tag != ''
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ vars.S3_REGION }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${S3_BUCKET:-}" ]]; then
+            echo "S3_BUCKET secret not set; skipping landing slogans upload."
+            exit 0
+          fi
+          if [[ -z "${S3_ACCESS_KEY_ID:-}" || -z "${S3_SECRET_ACCESS_KEY:-}" ]]; then
+            echo "S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY not set; skipping landing slogans upload."
+            exit 0
+          fi
+          REGION="${S3_REGION:-us-east-1}"
+          DEST_KEY="marketing/landing-slogans.md"
+          ENDPOINT_ARGS=()
+          if [[ -n "${S3_ENDPOINT:-}" ]]; then
+            ENDPOINT_ARGS=(--endpoint-url "${S3_ENDPOINT}")
+          fi
+          export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY"
+          aws s3 cp "${ENDPOINT_ARGS[@]}" --region "$REGION" web/content/landing-slogans.md "s3://${S3_BUCKET}/${DEST_KEY}"
+
+      # Publishes `web/content/billing-plans.md` into the shared asset bucket (key: marketing/billing-plans.md).
+      - name: Publish billing plans markdown to S3
+        if: steps.tag_version.outputs.new_tag != ''
+        env:
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
+          S3_REGION: ${{ vars.S3_REGION }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${S3_BUCKET:-}" ]]; then
+            echo "S3_BUCKET secret not set; skipping billing plans upload."
+            exit 0
+          fi
+          if [[ -z "${S3_ACCESS_KEY_ID:-}" || -z "${S3_SECRET_ACCESS_KEY:-}" ]]; then
+            echo "S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY not set; skipping billing plans upload."
+            exit 0
+          fi
+          REGION="${S3_REGION:-us-east-1}"
+          DEST_KEY="marketing/billing-plans.md"
+          ENDPOINT_ARGS=()
+          if [[ -n "${S3_ENDPOINT:-}" ]]; then
+            ENDPOINT_ARGS=(--endpoint-url "${S3_ENDPOINT}")
+          fi
+          export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID"
+          export AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY"
+          aws s3 cp "${ENDPOINT_ARGS[@]}" --region "$REGION" web/content/billing-plans.md "s3://${S3_BUCKET}/${DEST_KEY}"
+
+      - name: Set up Docker Buildx
+        if: steps.tag_version.outputs.new_tag != ''
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: steps.tag_version.outputs.new_tag != ''
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        if: steps.tag_version.outputs.new_tag != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: ./api
+          file: ./api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ steps.ns.outputs.owner_lc }}/kurator-api:${{ steps.tag_version.outputs.new_tag }}
+            ghcr.io/${{ steps.ns.outputs.owner_lc }}/kurator-api:latest
+          labels: |
+            org.opencontainers.image.version=${{ steps.tag_version.outputs.new_tag }}
+
+      - name: Build and push Web image
+        if: steps.tag_version.outputs.new_tag != ''
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: ./web/Dockerfile
+          push: true
+          build-args: |
+            API_INTERNAL_URL=http://kurator-api:8080
+            NEXT_PUBLIC_API_URL=http://localhost:8080
+            NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+            SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+          tags: |
+            ghcr.io/${{ steps.ns.outputs.owner_lc }}/kurator-web:${{ steps.tag_version.outputs.new_tag }}
+            ghcr.io/${{ steps.ns.outputs.owner_lc }}/kurator-web:latest
+          labels: |
+            org.opencontainers.image.version=${{ steps.tag_version.outputs.new_tag }}

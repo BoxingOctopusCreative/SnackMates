@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build
+.next/
+out/
+dist/
+bin/
+*.exe
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+*.test
+coverage.out
+
+# Logs
+*.log
+npm-debug.log*
+
+# Misc
+.turbo/
+
+web/AGENTS.md
+web/CLAUDE.md
+api/config.toml

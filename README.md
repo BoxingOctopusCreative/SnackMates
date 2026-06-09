@@ -9,9 +9,9 @@ Snack pen pals — build snack wishlists, get randomly matched with another user
 | Frontend | Next.js, Adobe React Spectrum (Aria) |
 | API | Go (Fiber) |
 | Database | PostgreSQL 18 |
-| Search | Meilisearch |
+| Search | Meilisearch (wishlist indexing), [Search-a-licious](https://search.openfoodfacts.org) (snack search) |
 | Cache | Valkey |
-| Object storage | S3-compatible (OVH Object Storage in prod; MinIO locally) |
+| Object storage | S3-compatible (Cloudflare R2 in prod; MinIO locally) |
 | Auth | Email/password, Discord OAuth, TOTP, WebAuthn |
 
 ## Quick start
@@ -63,6 +63,8 @@ cp api/config.example.toml api/config.toml
 CONFIG_FILE=./config.toml go run ./cmd/server
 # or
 go run ./cmd/server --config ./config.toml
+# or
+go run ./cmd/server -c ./config.toml
 ```
 
 Environment variables always override values from the TOML file, so secrets can stay in env even when using a config file.
@@ -74,7 +76,7 @@ Discord OAuth requires `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` from the 
 ## Features
 
 ### Wishlists
-Registered users create wishlists and add snack items (name, brand, notes, link, priority). Public items are indexed in Meilisearch.
+Registered users create wishlists and add snack items (name, type, brand, notes). Public items are indexed in Meilisearch for internal indexing; the header search uses OpenFoodFacts with AI assistance (Claude Haiku, falling back to [OVH Mistral Nemo](https://www.ovhcloud.com/en/public-cloud/ai-endpoints/catalog/mistral-nemo-instruct-2407/) if Haiku is unavailable).
 
 ### Snack matching
 The `/api/v1/matches/run` endpoint pairs verified users who:
@@ -91,21 +93,43 @@ Users are only matched with snack mates from a **different country**. Pairing us
 
 ### Storage
 
-S3-compatible object storage (OVH, MinIO, AWS, etc.) via the AWS SDK with a custom endpoint — no AWS-specific services required.
+S3-compatible object storage (Cloudflare R2, MinIO, etc.) via the AWS SDK with a custom endpoint — no AWS-specific services required.
 
 - `client-assets` bucket: user uploads (profile avatars, typically private)
 - `static-assets` bucket: first-party branding/static files
 
-**OVH Object Storage example:**
+**Cloudflare R2 example:**
 
 ```bash
-S3_ENDPOINT=https://s3.gra.io.cloud.ovh.net
-S3_REGION=gra
+S3_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
+S3_REGION=auto
+S3_ACCESS_KEY=<r2_access_key_id>
+S3_SECRET_KEY=<r2_secret_access_key>
 S3_USE_PATH_STYLE=true
 S3_PRESIGN_PRIVATE_OBJECTS=true
+# Optional: custom domain or r2.dev public URL for static assets
+# S3_PUBLIC_BASE_URL=https://static.example.com
 ```
 
-Private avatar objects are served via presigned URLs by default (recommended for OVH). For local MinIO with public buckets, set `S3_PRESIGN_PRIVATE_OBJECTS=false`.
+Create R2 API tokens in the Cloudflare dashboard (R2 → Manage R2 API tokens). Use path-style URLs and presigned URLs for private avatars. For local MinIO with public buckets, set `S3_PRESIGN_PRIVATE_OBJECTS=false`.
+
+### Email
+
+Local development uses **Mailpit** over SMTP (`EMAIL_PROVIDER=smtp`, `SMTP_HOST=localhost`, `SMTP_PORT=1025`). Open `http://localhost:8025` to read outbound mail.
+
+Production uses the **Mailgun HTTP API** (no SMTP relay required):
+
+```bash
+EMAIL_PROVIDER=mailgun
+EMAIL_FROM="SnackMates <noreply@mg.example.com>"
+MAILGUN_API_KEY=your-private-api-key
+MAILGUN_DOMAIN=mg.example.com
+# US (default): https://api.mailgun.net
+# EU region:
+# MAILGUN_API_BASE_URL=https://api.eu.mailgun.net
+```
+
+`SMTP_FROM` is still accepted as a fallback for `EMAIL_FROM`.
 
 ## Project layout
 
@@ -129,7 +153,7 @@ SnackMates/
 | GET | `/api/v1/auth/discord` | Start Discord OAuth |
 | GET/POST | `/api/v1/auth/mfa/*` | TOTP & WebAuthn setup |
 | CRUD | `/api/v1/wishlists/*` | Wishlists & items |
-| GET | `/api/v1/search?q=` | Meilisearch snack search |
+| GET | `/api/v1/search?q=` | AI-assisted OpenFoodFacts snack search |
 | GET/POST | `/api/v1/matches/*` | View matches / run pairing |
 
 ## Development notes
@@ -137,5 +161,4 @@ SnackMates/
 - Email verification and password reset links point at the web app (`WEB_ORIGIN`).
 - Sessions are stored in Postgres with HTTP-only cookies and Bearer token support.
 - Valkey caches OAuth state during Discord login.
-- For production, use OVH Object Storage (or another S3-compatible provider) and configure TLS, secrets, and SMTP.
-# SnackMates
+- For production, use Cloudflare R2 for object storage, Mailgun for email, and configure TLS and secrets.

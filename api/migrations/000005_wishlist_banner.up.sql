@@ -1,0 +1,2 @@
+ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS banner_key TEXT;
+ALTER TABLE wishlists ADD COLUMN IF NOT EXISTS banner_url TEXT;

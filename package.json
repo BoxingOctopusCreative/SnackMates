@@ -1,0 +1,9 @@
+{
+  "name": "snackmates",
+  "private": true,
+  "scripts": {
+    "seed": "cd api && go run ./cmd/seed",
+    "seed:remove": "cd api && go run ./cmd/seed remove",
+    "bot": "cd api && go run ./cmd/bot run"
+  }
+}
