@@ -106,7 +106,7 @@ jobs:
             goos=${spec%,*}
             goarch=${spec#*,}
             out="${GITHUB_WORKSPACE}/dist/kurator-api-${VERSION}-${goos}-${goarch}"
-            CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -trimpath -ldflags="-s -w" -o "$out" ./cmd/api
+            CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -trimpath -ldflags="-s -w" -o "$out" ./cmd/server
             chmod +x "$out"
           done
 
