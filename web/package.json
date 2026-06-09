@@ -17,7 +17,7 @@
     "@react-spectrum/theme-default": "^3.6.1",
     "@react-spectrum/toast": "^3.2.1",
     "@sentry/nextjs": "^10.57.0",
-    "next": "16.2.7",
+    "next": "16.3.0-preview.0",
     "qrcode.react": "^4.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
