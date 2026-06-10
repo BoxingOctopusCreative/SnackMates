@@ -38,7 +38,8 @@ services:
       OPENFOODFACTS_SEARCH_URL: https://search.openfoodfacts.org
       OPENFOODFACTS_BASE_URL: https://ca.openfoodfacts.org
       SENTRY_DSN: $SENTRY_DSN
-      SENTRY_ENVIRONMENT: development
+      SENTRY_ENVIRONMENT: production
+      EMAIL_PROVIDER: mailgun
       MAILGUN_API_KEY: $MAILGUN_API_KEY
       MAILGUN_DOMAIN: notifications.snackmates.food
       MAILGUN_API_BASE_URL: https://api.mailgun.net
