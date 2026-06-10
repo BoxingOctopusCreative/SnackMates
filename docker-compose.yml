@@ -7,8 +7,6 @@ services:
     networks:
       - shared-network
     environment:
-      HOSTNAME: api
-      DOMAIN: snackmates.food
       API_PORT: 8080
       API_BASE_URL: https://snackmates.food/api
       WEB_ORIGIN: https://snackmates.food
