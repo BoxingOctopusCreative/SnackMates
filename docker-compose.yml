@@ -47,11 +47,6 @@ services:
     restart: unless-stopped
     depends_on:
       - meilisearch
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
     labels:
       - traefik.enable=true
       - traefik.docker.network=shared-network
@@ -85,11 +80,6 @@ services:
       UNSPLASH_ACCESS_KEY: $UNSPLASH_ACCESS_KEY
     depends_on:
       - api
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
     labels:
       - traefik.enable=true
       - traefik.docker.network=shared-network
@@ -120,11 +110,6 @@ services:
       - shared-network
     volumes:
       - meilisearch_data:/meili_data
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:7700/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
 
 volumes:
   meilisearch_data:
