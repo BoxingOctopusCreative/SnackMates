@@ -1,3 +1,5 @@
+"use client";
+
 import { Suspense } from "react";
 import { ProgressCircle, View } from "@adobe/react-spectrum";
 import { SettingsRedirect } from "./SettingsRedirect";

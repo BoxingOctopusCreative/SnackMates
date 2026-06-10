@@ -11,7 +11,7 @@ import {
 } from "@adobe/react-spectrum";
 import { AppModal } from "@/components/AppModal";
 import { api, getToken } from "@/lib/api";
-import { DEFAULT_SNACK_TYPE, SNACK_TYPES } from "@/lib/snack-types";
+import { DEFAULT_SNACK_TYPE, normalizeSnackType, SNACK_TYPES } from "@/lib/snack-types";
 
 type AddWishlistSnackModalProps = {
   isOpen: boolean;
@@ -68,7 +68,7 @@ export function AddWishlistSnackModal({
           <Picker
             label="Type"
             selectedKey={snackType}
-            onSelectionChange={(key) => setSnackType(String(key))}
+            onSelectionChange={(key) => setSnackType(normalizeSnackType(String(key)))}
             isRequired
           >
             {SNACK_TYPES.map((type) => (

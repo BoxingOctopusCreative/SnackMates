@@ -17,21 +17,27 @@ export function parseCreationOptions(
   options: WebAuthnCreationOptionsPayload,
 ): PublicKeyCredentialCreationOptions {
   const source = options.publicKey ?? options;
-  if (!source.challenge || !source.user?.id) {
+  const { rp, pubKeyCredParams, user, challenge } = source;
+  if (!challenge || !user?.id || !rp || !pubKeyCredParams?.length) {
     throw new Error("Invalid WebAuthn registration options from server.");
   }
 
   return {
-    ...source,
-    challenge: toBuffer(source.challenge),
+    rp,
+    pubKeyCredParams,
+    challenge: toBuffer(challenge),
     user: {
-      ...source.user,
-      id: toBuffer(source.user.id),
+      ...user,
+      id: toBuffer(user.id),
     },
+    attestation: source.attestation,
+    authenticatorSelection: source.authenticatorSelection,
     excludeCredentials: source.excludeCredentials?.map((cred) => ({
       ...cred,
       id: toBuffer(cred.id as unknown as Base64Like),
     })),
+    extensions: source.extensions,
+    timeout: source.timeout,
   };
 }
 
