@@ -1,7 +1,7 @@
 services:
 
   api:
-    image: ghcr.io/snackmates/snackmates-api:latest
+    image: ghcr.io/boxingoctopuscreative/snackmates-api:latest
     expose:
       - "8080"
     networks:
@@ -74,7 +74,7 @@ services:
       - traefik.http.middlewares.snackmates-api.headers.STSPreload=true
 
   web:
-    image: ghcr.io/snackmates/snackmates-web:latest
+    image: ghcr.io/boxingoctopuscreative/snackmates-web:latest
     expose:
       - "3000"
     networks:
