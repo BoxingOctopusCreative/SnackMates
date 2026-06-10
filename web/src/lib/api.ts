@@ -1,4 +1,22 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const DEFAULT_API_URL = "http://localhost:8080";
+
+function resolveApiUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL;
+
+  // NEXT_PUBLIC_* values are baked at build time. When a production image was built
+  // with localhost defaults, use same-origin relative API paths in the browser.
+  if (
+    typeof window !== "undefined" &&
+    configured.includes("localhost") &&
+    window.location.hostname !== "localhost"
+  ) {
+    return "";
+  }
+
+  return configured;
+}
+
+export const API_URL = resolveApiUrl();
 
 export type PublicUser = {
   id: string;

@@ -74,7 +74,7 @@ services:
     networks:
       - shared-network
     environment:
-      NEXT_PUBLIC_API_URL: http://snackmates.food/api
+      NEXT_PUBLIC_API_URL: https://snackmates.food
       NEXT_PUBLIC_APP_URL: https://snackmates.food
       NEXT_PUBLIC_SENTRY_DSN: $NEXT_PUBLIC_SENTRY_DSN
       UNSPLASH_ACCESS_KEY: $UNSPLASH_ACCESS_KEY

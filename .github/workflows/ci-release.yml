@@ -160,7 +160,8 @@ jobs:
           push: true
           build-args: |
             API_INTERNAL_URL=http://snackmates-api:8080
-            NEXT_PUBLIC_API_URL=http://localhost:8080
+            NEXT_PUBLIC_API_URL=https://snackmates.food
+            NEXT_PUBLIC_APP_URL=https://snackmates.food
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
             SENTRY_ORG=${{ secrets.SENTRY_ORG }}
             SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
