@@ -2,13 +2,15 @@ services:
 
   api:
     image: ghcr.io/snackmates/snackmates-api:latest
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
+    networks:
+      - shared-network
     environment:
       HOSTNAME: api
       DOMAIN: snackmates.food
       API_PORT: 8080
-      API_BASE_URL: https://api.snackmates.food
+      API_BASE_URL: https://snackmates.food/api
       WEB_ORIGIN: https://snackmates.food
       JWT_SECRET: $JWT_SECRET
       DATABASE_URL: $DATABASE_URL
@@ -21,7 +23,29 @@ services:
       S3_SECRET_KEY: $S3_SECRET_KEY
       S3_CLIENT_ASSETS_BUCKET: $S3_CLIENT_ASSETS_BUCKET
       S3_STATIC_ASSETS_BUCKET: $S3_STATIC_ASSETS_BUCKET
-
+      S3_USE_PATH_STYLE: true
+      S3_PRESIGN_PRIVATE_OBJECTS: true
+      S3_PRESIGN_EXPIRY_SECONDS: 3600
+      DISCORD_CLIENT_ID: $DISCORD_CLIENT_ID
+      DISCORD_CLIENT_SECRET: $DISCORD_CLIENT_SECRET
+      DISCORD_REDIRECT_URI: https://snackmates.food/api/v1/auth/discord/callback
+      WEBAUTHN_RP_ID: snackmates.food
+      WEBAUTHN_RP_ORIGIN: https://snackmates.food
+      WEBAUTHN_RP_NAME: SnackMates
+      ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
+      ANTHROPIC_MODEL: claude-haiku-4-5-20251001
+      OVH_AI_ENDPOINTS_ACCESS_TOKEN: $OVH_AI_ENDPOINTS_ACCESS_TOKEN
+      OVH_AI_MODEL: Mistral-Nemo-Instruct-2407
+      OVH_AI_BASE_URL: https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
+      OPENFOODFACTS_SEARCH_URL: https://search.openfoodfacts.org
+      OPENFOODFACTS_BASE_URL: https://ca.openfoodfacts.org
+      SENTRY_DSN: $SENTRY_DSN
+      SENTRY_ENVIRONMENT: development
+      MAILGUN_API_KEY: $MAILGUN_API_KEY
+      MAILGUN_DOMAIN: notifications.snackmates.food
+      MAILGUN_API_BASE_URL: https://api.mailgun.net
+      EMAIL_FROM: notifications@snackmates.food
+    restart: unless-stopped
     depends_on:
       - meilisearch
     healthcheck:
@@ -29,13 +53,37 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=shared-network
+      - traefik.http.routers.snackmates-api.rule=Host(`snackmates.food`) && PathPrefix(`/api`)
+      - traefik.http.routers.snackmates-api.service=snackmates-api
+      - traefik.http.routers.snackmates-api.middlewares=snackmates-api@docker
+      - traefik.http.routers.snackmates-api.priority=100
+      - traefik.http.routers.snackmates-api.tls=true
+      - traefik.http.routers.snackmates-api.entrypoints=websecure
+      - traefik.http.routers.snackmates-api.tls.certresolver=leresolver
+      - traefik.http.services.snackmates-api.loadbalancer.server.port=8080
+      - traefik.http.middlewares.snackmates-api.headers.SSLRedirect=true
+      - traefik.http.middlewares.snackmates-api.headers.STSSeconds=315360000
+      - traefik.http.middlewares.snackmates-api.headers.browserXSSFilter=true
+      - traefik.http.middlewares.snackmates-api.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.snackmates-api.headers.forceSTSHeader=true
+      - traefik.http.middlewares.snackmates-api.headers.SSLHost=snackmates.food
+      - traefik.http.middlewares.snackmates-api.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.snackmates-api.headers.STSPreload=true
 
   web:
     image: ghcr.io/snackmates/snackmates-web:latest
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
+    networks:
+      - shared-network
     environment:
-      - NEXT_PUBLIC_API_URL=http://api:8080
+      NEXT_PUBLIC_API_URL: http://snackmates.food/api
+      NEXT_PUBLIC_APP_URL: https://snackmates.food
+      NEXT_PUBLIC_SENTRY_DSN: $NEXT_PUBLIC_SENTRY_DSN
+      UNSPLASH_ACCESS_KEY: $UNSPLASH_ACCESS_KEY
     depends_on:
       - api
     healthcheck:
@@ -43,14 +91,34 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=shared-network
+      - traefik.http.routers.snackmates-web.rule=Host(`snackmates.food`) && !PathPrefix(`/api`)
+      - traefik.http.routers.snackmates-web.service=snackmates-web
+      - traefik.http.routers.snackmates-web.middlewares=snackmates-web@docker
+      - traefik.http.routers.snackmates-web.tls=true
+      - traefik.http.routers.snackmates-web.entrypoints=websecure
+      - traefik.http.routers.snackmates-web.tls.certresolver=leresolver
+      - traefik.http.services.snackmates-web.loadbalancer.server.port=3000
+      - traefik.http.middlewares.snackmates-web.headers.SSLRedirect=true
+      - traefik.http.middlewares.snackmates-web.headers.STSSeconds=315360000
+      - traefik.http.middlewares.snackmates-web.headers.browserXSSFilter=true
+      - traefik.http.middlewares.snackmates-web.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.snackmates-web.headers.forceSTSHeader=true
+      - traefik.http.middlewares.snackmates-web.headers.SSLHost=snackmates.food
+      - traefik.http.middlewares.snackmates-web.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.snackmates-web.headers.STSPreload=true
 
   meilisearch:
     image: getmeili/meilisearch:v1.12
     environment:
-      MEILI_ENV: development
-      MEILI_MASTER_KEY: snackmates-dev-master-key
+      MEILI_ENV: production
+      MEILI_MASTER_KEY: $MEILI_MASTER_KEY
     ports:
       - "7700:7700"
+    networks:
+      - shared-network
     volumes:
       - meilisearch_data:/meili_data
     healthcheck:
@@ -61,3 +129,7 @@ services:
 
 volumes:
   meilisearch_data:
+
+networks:
+  shared-network:
+    external: true
