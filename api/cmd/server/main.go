@@ -16,6 +16,7 @@ import (
 	"github.com/boxingoctopus/snackmates/api/internal/handlers"
 	"github.com/boxingoctopus/snackmates/api/internal/notifications"
 	"github.com/boxingoctopus/snackmates/api/internal/search"
+	"github.com/boxingoctopus/snackmates/api/internal/sentryx"
 	"github.com/boxingoctopus/snackmates/api/internal/snacksearch"
 	"github.com/boxingoctopus/snackmates/api/internal/storage"
 	"github.com/gofiber/fiber/v2"
@@ -108,6 +109,13 @@ func run(configFile string) error {
 		AllowCredentials: true,
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-WebAuthn-Session, X-Device-Name",
 	}))
+
+	sentryEnabled := sentryx.Init(cfg.SentryDSN, cfg.SentryEnvironment)
+	if sentryEnabled {
+		defer sentryx.Flush(2 * time.Second)
+		app.Use(sentryx.Middleware())
+		log.Println("Sentry error monitoring enabled")
+	}
 
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "ok", "service": "snackmates-api"})

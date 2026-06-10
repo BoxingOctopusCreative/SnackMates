@@ -23,6 +23,7 @@ type fileConfig struct {
 	Anthropic  anthropicFileConfig  `toml:"anthropic"`
 	OVHAI      ovhAIFileConfig      `toml:"ovh_ai"`
 	OpenFoodFacts openFoodFactsFileConfig `toml:"openfoodfacts"`
+	Sentry        sentryFileConfig          `toml:"sentry"`
 }
 
 type serverFileConfig struct {
@@ -103,6 +104,11 @@ type openFoodFactsFileConfig struct {
 	BaseURL   string `toml:"base_url"`
 }
 
+type sentryFileConfig struct {
+	DSN         string `toml:"dsn"`
+	Environment string `toml:"environment"`
+}
+
 func loadFile(path string) (Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -180,6 +186,9 @@ func applyFile(cfg *Config, file fileConfig) {
 	setString(&cfg.OVHAIBaseURL, file.OVHAI.BaseURL)
 	setString(&cfg.OFFSearchURL, file.OpenFoodFacts.SearchURL)
 	setString(&cfg.OFFBaseURL, file.OpenFoodFacts.BaseURL)
+
+	setString(&cfg.SentryDSN, file.Sentry.DSN)
+	setString(&cfg.SentryEnvironment, file.Sentry.Environment)
 }
 
 func setString(dst *string, value string) {

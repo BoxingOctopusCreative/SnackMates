@@ -292,8 +292,8 @@ jobs:
           file: ./api/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.ns.outputs.owner_lc }}/kurator-api:${{ steps.tag_version.outputs.new_tag }}
-            ghcr.io/${{ steps.ns.outputs.owner_lc }}/kurator-api:latest
+            ghcr.io/${{ steps.ns.outputs.owner_lc }}/snackmates-api:${{ steps.tag_version.outputs.new_tag }}
+            ghcr.io/${{ steps.ns.outputs.owner_lc }}/snackmates-api:latest
           labels: |
             org.opencontainers.image.version=${{ steps.tag_version.outputs.new_tag }}
 
@@ -305,14 +305,14 @@ jobs:
           file: ./web/Dockerfile
           push: true
           build-args: |
-            API_INTERNAL_URL=http://kurator-api:8080
+            API_INTERNAL_URL=http://snackmates-api:8080
             NEXT_PUBLIC_API_URL=http://localhost:8080
             NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
             SENTRY_ORG=${{ secrets.SENTRY_ORG }}
             SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           tags: |
-            ghcr.io/${{ steps.ns.outputs.owner_lc }}/kurator-web:${{ steps.tag_version.outputs.new_tag }}
-            ghcr.io/${{ steps.ns.outputs.owner_lc }}/kurator-web:latest
+            ghcr.io/${{ steps.ns.outputs.owner_lc }}/snackmates-web:${{ steps.tag_version.outputs.new_tag }}
+            ghcr.io/${{ steps.ns.outputs.owner_lc }}/snackmates-web:latest
           labels: |
             org.opencontainers.image.version=${{ steps.tag_version.outputs.new_tag }}

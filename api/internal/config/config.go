@@ -46,6 +46,8 @@ type Config struct {
 	OVHAIBaseURL      string
 	OFFSearchURL      string
 	OFFBaseURL        string
+	SentryDSN         string
+	SentryEnvironment string
 
 	s3UsePathStyleSet          bool
 	s3PresignPrivateObjectsSet bool
@@ -126,6 +128,9 @@ func applyEnv(cfg *Config) {
 	cfg.OVHAIBaseURL = envString(cfg.OVHAIBaseURL, "OVH_AI_BASE_URL", "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1")
 	cfg.OFFSearchURL = envString(cfg.OFFSearchURL, "OPENFOODFACTS_SEARCH_URL", "https://search.openfoodfacts.org")
 	cfg.OFFBaseURL = envString(cfg.OFFBaseURL, "OPENFOODFACTS_BASE_URL", "https://ca.openfoodfacts.org")
+
+	cfg.SentryDSN = envString(cfg.SentryDSN, "SENTRY_DSN", "")
+	cfg.SentryEnvironment = envString(cfg.SentryEnvironment, "SENTRY_ENVIRONMENT", "")
 }
 
 func envString(current, key, fallback string) string {
