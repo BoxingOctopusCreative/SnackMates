@@ -2,8 +2,8 @@ services:
 
   api:
     image: ghcr.io/boxingoctopuscreative/snackmates-api:latest
-    ports:
-      - "8080:8080"
+    expose:
+      - 8080
     networks:
       - shared-network
     environment:
@@ -69,8 +69,8 @@ services:
 
   web:
     image: ghcr.io/boxingoctopuscreative/snackmates-web:latest
-    ports:
-      - "3000:3000"
+    expose:
+      - 3000
     networks:
       - shared-network
     environment:
