@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ActionButton, Avatar } from "@adobe/react-spectrum";
 import { avatarImageSrc } from "@/lib/avatar";
-import { clearToken, User } from "@/lib/api";
+import { clearToken, api, User } from "@/lib/api";
 import { HeaderDropdown } from "@/components/HeaderDropdown";
 import {
   HeaderDropdownDivider,
@@ -61,7 +61,12 @@ export function UserMenu({ user }: { user: User }) {
         <HeaderDropdownSection>
           <HeaderDropdownItem
             variant="danger"
-            onPress={() => {
+            onPress={async () => {
+              try {
+                await api.logout();
+              } catch {
+                // Still sign out locally if the server request fails.
+              }
               clearToken();
               router.push("/login");
             }}

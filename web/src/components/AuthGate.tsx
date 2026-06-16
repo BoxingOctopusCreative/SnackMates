@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, getToken, saveToken, User } from "@/lib/api";
+import { restoreSessionFromCookie } from "@/lib/session";
 import { AppShell } from "@/components/AppShell";
 import { ProgressCircle, View } from "@adobe/react-spectrum";
 
@@ -12,7 +13,7 @@ function consumeTokenFromURL() {
   const urlToken = params.get("token");
   if (!urlToken) return;
 
-  saveToken(urlToken);
+  saveToken(urlToken, { remember: true });
   params.delete("token");
   const query = params.toString();
   const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
@@ -44,8 +45,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     consumeTokenFromURL();
 
-    api
-      .me(getToken())
+    restoreSessionFromCookie()
+      .then((token) => {
+        if (!token) {
+          throw new Error("unauthenticated");
+        }
+        return api.me(token);
+      })
       .then(setUser)
       .catch(() => {
         router.replace("/login");

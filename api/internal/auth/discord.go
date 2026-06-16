@@ -52,33 +52,33 @@ func (d *DiscordService) AuthURL(state string) string {
 }
 
 // HandleLoginCallback signs in or registers a user via Discord OAuth.
-func (d *DiscordService) HandleLoginCallback(ctx context.Context, pool *pgxpool.Pool, code string) (uuid.UUID, string, error) {
+func (d *DiscordService) HandleLoginCallback(ctx context.Context, pool *pgxpool.Pool, code string) (uuid.UUID, string, time.Time, error) {
 	du, profile, err := d.fetchProfile(ctx, code)
 	if err != nil {
-		return uuid.Nil, "", err
+		return uuid.Nil, "", time.Time{}, err
 	}
 	if du.Email == "" {
-		return uuid.Nil, "", fmt.Errorf("discord account has no email")
+		return uuid.Nil, "", time.Time{}, fmt.Errorf("discord account has no email")
 	}
 
 	userID, err := upsertDiscordUser(ctx, pool, du, profile)
 	if err != nil {
-		return uuid.Nil, "", err
+		return uuid.Nil, "", time.Time{}, err
 	}
 
 	var deactivatedAt interface{}
 	if err := pool.QueryRow(ctx, `SELECT deactivated_at FROM users WHERE id = $1`, userID).Scan(&deactivatedAt); err != nil {
-		return uuid.Nil, "", err
+		return uuid.Nil, "", time.Time{}, err
 	}
 	if deactivatedAt != nil {
-		return uuid.Nil, "", ErrAccountDeactivated
+		return uuid.Nil, "", time.Time{}, ErrAccountDeactivated
 	}
 
-	sessionToken, err := CreateSession(ctx, pool, userID)
+	sessionToken, expiresAt, err := CreateSession(ctx, pool, userID, true)
 	if err != nil {
-		return uuid.Nil, "", err
+		return uuid.Nil, "", time.Time{}, err
 	}
-	return userID, sessionToken, nil
+	return userID, sessionToken, expiresAt, nil
 }
 
 // LinkAccount connects Discord to an existing SnackMates account and syncs profile fields.

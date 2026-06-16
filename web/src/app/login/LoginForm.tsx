@@ -5,21 +5,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Button,
+  Checkbox,
   Flex,
   Form,
   Heading,
+  ProgressCircle,
   Text,
   TextField,
+  View,
 } from "@adobe/react-spectrum";
 import { AuthPageShell } from "@/components/AuthPageShell";
 import { DiscordOAuthButton } from "@/components/DiscordOAuthButton";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { useExistingSessionRedirect } from "@/components/useExistingSessionRedirect";
 import { ApiError, api, discordUrl, saveToken } from "@/lib/api";
 import { turnstileEnabled } from "@/lib/turnstile";
 import type { UnsplashPhoto } from "@/lib/unsplash";
 
 export function LoginForm({ background }: { background: UnsplashPhoto | null }) {
   const router = useRouter();
+  const checkingSession = useExistingSessionRedirect();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totpCode, setTotpCode] = useState("");
@@ -31,6 +36,7 @@ export function LoginForm({ background }: { background: UnsplashPhoto | null }) 
   const [reactivateLoading, setReactivateLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [rememberMe, setRememberMe] = useState(false);
   const turnstileOn = turnstileEnabled();
 
   function resetTurnstile() {
@@ -66,6 +72,7 @@ export function LoginForm({ background }: { background: UnsplashPhoto | null }) 
         password,
         totp_code: totpCode || undefined,
         turnstile_token: turnstileToken || undefined,
+        remember_me: rememberMe,
       });
       if (res.mfa_required) {
         setMfaRequired(true);
@@ -73,7 +80,7 @@ export function LoginForm({ background }: { background: UnsplashPhoto | null }) 
         return;
       }
       if (res.token) {
-        saveToken(res.token);
+        saveToken(res.token, { remember: res.remember ?? rememberMe });
         router.push("/dashboard");
       }
     } catch (err) {
@@ -107,6 +114,14 @@ export function LoginForm({ background }: { background: UnsplashPhoto | null }) 
     }
   }
 
+  if (checkingSession) {
+    return (
+      <View minHeight="100vh" UNSAFE_style={{ display: "grid", placeItems: "center" }}>
+        <ProgressCircle isIndeterminate aria-label="Loading" />
+      </View>
+    );
+  }
+
   return (
     <AuthPageShell background={background}>
       <Heading level={2}>Sign In to SnackMates</Heading>
@@ -122,6 +137,9 @@ export function LoginForm({ background }: { background: UnsplashPhoto | null }) 
               description="Enter the 6-digit code from your authenticator app."
             />
           )}
+          <Checkbox isSelected={rememberMe} onChange={setRememberMe}>
+            Remember me
+          </Checkbox>
           {error && <Text UNSAFE_style={{ color: "var(--sm-error)" }}>{error}</Text>}
           {reactivateMessage && <Text>{reactivateMessage}</Text>}
           {accountDeactivated && (

@@ -9,18 +9,22 @@ import {
   Heading,
   Item,
   Picker,
+  ProgressCircle,
   Text,
   TextField,
+  View,
 } from "@adobe/react-spectrum";
 import { AuthPageShell } from "@/components/AuthPageShell";
 import { DiscordOAuthButton } from "@/components/DiscordOAuthButton";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { useExistingSessionRedirect } from "@/components/useExistingSessionRedirect";
 import { api, discordUrl } from "@/lib/api";
 import { turnstileEnabled } from "@/lib/turnstile";
 import { COUNTRIES } from "@/lib/countries";
 import type { UnsplashPhoto } from "@/lib/unsplash";
 
 export function RegisterForm({ background }: { background: UnsplashPhoto | null }) {
+  const checkingSession = useExistingSessionRedirect();
   const [displayName, setDisplayName] = useState("");
   const [country, setCountry] = useState("");
   const [email, setEmail] = useState("");
@@ -61,6 +65,14 @@ export function RegisterForm({ background }: { background: UnsplashPhoto | null 
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <View minHeight="100vh" UNSAFE_style={{ display: "grid", placeItems: "center" }}>
+        <ProgressCircle isIndeterminate aria-label="Loading" />
+      </View>
+    );
   }
 
   return (

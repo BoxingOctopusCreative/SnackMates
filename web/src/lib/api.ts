@@ -262,11 +262,20 @@ export const api = {
       body: JSON.stringify(body),
     });
   },
-  login(body: { email: string; password: string; totp_code?: string; turnstile_token?: string }) {
-    return request<{ token?: string; mfa_required?: boolean; methods?: string[] }>(
+  login(body: {
+    email: string;
+    password: string;
+    totp_code?: string;
+    turnstile_token?: string;
+    remember_me?: boolean;
+  }) {
+    return request<{ token?: string; mfa_required?: boolean; methods?: string[]; remember?: boolean }>(
       "/api/v1/auth/login",
       { method: "POST", body: JSON.stringify(body) },
     );
+  },
+  session() {
+    return request<{ token: string; remember: boolean }>("/api/v1/auth/session");
   },
   logout(token?: string | null) {
     return request<{ ok: boolean }>("/api/v1/auth/logout", { method: "POST" }, token);
@@ -638,19 +647,28 @@ export function discordUrl() {
   return `${API_URL}/api/v1/auth/discord`;
 }
 
-export function saveToken(token: string) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("snackmates_token", token);
+export const TOKEN_STORAGE_KEY = "snackmates_token";
+
+export function saveToken(token: string, options?: { remember?: boolean }) {
+  if (typeof window === "undefined") return;
+  const remember = options?.remember ?? true;
+  if (remember) {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
   }
 }
 
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("snackmates_token");
+  return sessionStorage.getItem(TOKEN_STORAGE_KEY) ?? localStorage.getItem(TOKEN_STORAGE_KEY);
 }
 
 export function clearToken() {
   if (typeof window !== "undefined") {
-    localStorage.removeItem("snackmates_token");
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
   }
 }

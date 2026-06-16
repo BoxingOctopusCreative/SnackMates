@@ -39,6 +39,11 @@ func OptionalAuth(pool *pgxpool.Pool) fiber.Handler {
 }
 
 func extractToken(c *fiber.Ctx) string {
+	return ExtractToken(c)
+}
+
+// ExtractToken reads a session token from the Authorization header, query string, or cookie.
+func ExtractToken(c *fiber.Ctx) string {
 	authHeader := c.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		return strings.TrimPrefix(authHeader, "Bearer ")

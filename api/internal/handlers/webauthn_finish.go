@@ -45,10 +45,10 @@ func (h *AuthHandler) WebAuthnLoginFinishRaw(c *fiber.Ctx) error {
 	if err := h.webauthn.FinishLogin(c.Context(), h.pool, userID, sessionData, parsed); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-	token, err := auth.CreateSession(c.Context(), h.pool, userID)
+	token, expiresAt, err := auth.CreateSession(c.Context(), h.pool, userID, true)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-	setSessionCookie(c, token)
+	setSessionCookie(c, h.cfg, token, expiresAt)
 	return c.JSON(fiber.Map{"token": token, "ok": true})
 }

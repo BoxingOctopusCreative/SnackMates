@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { UserMenu } from "@/components/UserMenu";
 import { clearToken, getToken } from "@/lib/api";
+import * as apiModule from "@/lib/api";
 import { mockUser } from "@test/fixtures";
 import { navigationMocks } from "@test/navigation";
 import { renderWithProviders } from "@test/utils";
@@ -43,6 +44,7 @@ describe("UserMenu", () => {
 
   it("logs out and clears the auth token", async () => {
     const user = userEvent.setup();
+    const logout = vi.spyOn(apiModule.api, "logout").mockResolvedValue({ ok: true });
     localStorage.setItem("snackmates_token", "token-123");
 
     renderWithProviders(<UserMenu user={mockUser} />);
@@ -51,6 +53,7 @@ describe("UserMenu", () => {
     await user.click(screen.getByRole("menuitem", { name: "Log Out" }));
 
     expect(getToken()).toBeNull();
+    expect(logout).toHaveBeenCalled();
     expect(navigationMocks.push).toHaveBeenCalledWith("/login");
     clearToken();
   });

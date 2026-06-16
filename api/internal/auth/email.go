@@ -104,7 +104,7 @@ func VerifyEmail(ctx context.Context, pool *pgxpool.Pool, token string) error {
 	return nil
 }
 
-func Login(ctx context.Context, pool *pgxpool.Pool, email, password string) (uuid.UUID, string, bool, error) {
+func Login(ctx context.Context, pool *pgxpool.Pool, email, password string, remember bool) (uuid.UUID, string, bool, time.Time, error) {
 	var userID uuid.UUID
 	var hash string
 	var totpEnabled bool
@@ -113,40 +113,23 @@ func Login(ctx context.Context, pool *pgxpool.Pool, email, password string) (uui
 		SELECT id, password_hash, totp_enabled, deactivated_at FROM users WHERE email = $1
 	`, email).Scan(&userID, &hash, &totpEnabled, &deactivatedAt)
 	if err != nil {
-		return uuid.Nil, "", false, fmt.Errorf("invalid credentials")
+		return uuid.Nil, "", false, time.Time{}, fmt.Errorf("invalid credentials")
 	}
 	if hash == "" || !CheckPassword(hash, password) {
-		return uuid.Nil, "", false, fmt.Errorf("invalid credentials")
+		return uuid.Nil, "", false, time.Time{}, fmt.Errorf("invalid credentials")
 	}
 	if deactivatedAt != nil {
-		return uuid.Nil, "", false, ErrAccountDeactivated
+		return uuid.Nil, "", false, time.Time{}, ErrAccountDeactivated
 	}
-	sessionToken, err := CreateSession(ctx, pool, userID)
+	sessionToken, expiresAt, err := CreateSession(ctx, pool, userID, remember)
 	if err != nil {
-		return uuid.Nil, "", false, err
+		return uuid.Nil, "", false, time.Time{}, err
 	}
-	return userID, sessionToken, totpEnabled, nil
-}
-
-func CreateSession(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (string, error) {
-	token, err := NewToken()
-	if err != nil {
-		return "", err
-	}
-	_, err = pool.Exec(ctx, `
-		INSERT INTO sessions (user_id, token_hash, expires_at)
-		VALUES ($1, $2, NOW() + INTERVAL '7 days')
-	`, userID, HashToken(token))
-	return token, err
+	return userID, sessionToken, totpEnabled, expiresAt, nil
 }
 
 func ValidateSession(ctx context.Context, pool *pgxpool.Pool, token string) (uuid.UUID, error) {
-	var userID uuid.UUID
-	err := pool.QueryRow(ctx, `
-		SELECT s.user_id FROM sessions s
-		JOIN users u ON u.id = s.user_id
-		WHERE s.token_hash = $1 AND s.expires_at > NOW() AND u.deactivated_at IS NULL
-	`, HashToken(token)).Scan(&userID)
+	userID, _, err := SessionDetails(ctx, pool, token)
 	return userID, err
 }
 

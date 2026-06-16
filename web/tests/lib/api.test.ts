@@ -11,13 +11,22 @@ import {
 import { mockFetchJson } from "@test/utils";
 
 describe("api token helpers", () => {
-  it("stores and retrieves the auth token", () => {
-    saveToken("abc123");
+  it("stores and retrieves the auth token in localStorage when remembered", () => {
+    saveToken("abc123", { remember: true });
     expect(getToken()).toBe("abc123");
+    expect(localStorage.getItem("snackmates_token")).toBe("abc123");
+    expect(sessionStorage.getItem("snackmates_token")).toBeNull();
   });
 
-  it("clears the auth token", () => {
-    saveToken("abc123");
+  it("stores and retrieves the auth token in sessionStorage when not remembered", () => {
+    saveToken("abc123", { remember: false });
+    expect(getToken()).toBe("abc123");
+    expect(sessionStorage.getItem("snackmates_token")).toBe("abc123");
+    expect(localStorage.getItem("snackmates_token")).toBeNull();
+  });
+
+  it("clears the auth token from both stores", () => {
+    saveToken("abc123", { remember: true });
     clearToken();
     expect(getToken()).toBeNull();
   });

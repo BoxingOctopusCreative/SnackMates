@@ -6,12 +6,18 @@ import * as apiModule from "@/lib/api";
 import { navigationMocks } from "@test/navigation";
 import { renderWithProviders, getField } from "@test/utils";
 
+vi.mock("@/lib/session", () => ({
+  restoreSessionFromCookie: vi.fn().mockResolvedValue(null),
+}));
+
 describe("LoginPage", () => {
   it("signs in and stores the auth token", async () => {
     const user = userEvent.setup();
     vi.spyOn(apiModule.api, "login").mockResolvedValue({ token: "jwt-token" });
 
     renderWithProviders(<LoginForm background={null} />);
+
+    expect(await screen.findByRole("textbox", { name: /^Email/ })).toBeInTheDocument();
 
     await user.type(getField(/^Email/), "snacker@example.com");
     await user.type(getField(/^Password/), "secret123");
@@ -28,6 +34,8 @@ describe("LoginPage", () => {
     vi.spyOn(apiModule.api, "login").mockResolvedValue({ mfa_required: true, methods: ["totp"] });
 
     renderWithProviders(<LoginForm background={null} />);
+
+    expect(await screen.findByRole("textbox", { name: /^Email/ })).toBeInTheDocument();
 
     await user.type(getField(/^Email/), "snacker@example.com");
     await user.type(getField(/^Password/), "secret123");
@@ -49,6 +57,8 @@ describe("LoginPage", () => {
     vi.spyOn(apiModule.api, "login").mockRejectedValue(new apiModule.ApiError(401, "Bad credentials"));
 
     renderWithProviders(<LoginForm background={null} />);
+
+    expect(await screen.findByRole("textbox", { name: /^Email/ })).toBeInTheDocument();
 
     await user.type(getField(/^Email/), "snacker@example.com");
     await user.type(getField(/^Password/), "wrong");

@@ -5,6 +5,10 @@ import { RegisterForm } from "@/app/register/RegisterForm";
 import * as apiModule from "@/lib/api";
 import { renderWithProviders, getField } from "@test/utils";
 
+vi.mock("@/lib/session", () => ({
+  restoreSessionFromCookie: vi.fn().mockResolvedValue(null),
+}));
+
 describe("RegisterPage", () => {
   it("creates an account and shows the confirmation message", async () => {
     const user = userEvent.setup();
@@ -14,6 +18,8 @@ describe("RegisterPage", () => {
     });
 
     renderWithProviders(<RegisterForm background={null} />);
+
+    expect(await screen.findByRole("textbox", { name: /^Display name/ })).toBeInTheDocument();
 
     await user.type(getField(/^Display name/), "Snack Fan");
     await user.type(getField(/^Email/), "snacker@example.com");
@@ -30,6 +36,8 @@ describe("RegisterPage", () => {
     );
 
     renderWithProviders(<RegisterForm background={null} />);
+
+    expect(await screen.findByRole("textbox", { name: /^Display name/ })).toBeInTheDocument();
 
     await user.type(getField(/^Display name/), "Snack Fan");
     await user.type(getField(/^Email/), "snacker@example.com");

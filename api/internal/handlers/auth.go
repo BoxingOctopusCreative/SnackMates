@@ -33,6 +33,7 @@ func (h *AuthHandler) RegisterRoutes(app fiber.Router) {
 	auth := app.Group("/auth")
 	auth.Post("/register", h.Register)
 	auth.Post("/login", h.Login)
+	auth.Get("/session", h.Session)
 	auth.Post("/logout", h.Logout)
 	auth.Post("/verify-email", h.VerifyEmail)
 	auth.Post("/forgot-password", h.ForgotPassword)
@@ -90,6 +91,7 @@ type loginRequest struct {
 	Password       string `json:"password"`
 	TOTPCode       string `json:"totp_code"`
 	TurnstileToken string `json:"turnstile_token"`
+	RememberMe     bool   `json:"remember_me"`
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
@@ -100,7 +102,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	if err := h.checkTurnstile(c, req.TurnstileToken); err != nil {
 		return err
 	}
-	userID, token, totpRequired, err := auth.Login(c.Context(), h.pool, req.Email, req.Password)
+	userID, token, totpRequired, expiresAt, err := auth.Login(c.Context(), h.pool, req.Email, req.Password, req.RememberMe)
 	if err != nil {
 		if errors.Is(err, auth.ErrAccountDeactivated) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
@@ -118,8 +120,28 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid totp code"})
 		}
 	}
-	setSessionCookie(c, token)
-	return c.JSON(fiber.Map{"token": token})
+	setSessionCookie(c, h.cfg, token, expiresAt)
+	return c.JSON(fiber.Map{
+		"token":    token,
+		"remember": auth.SessionRemembered(expiresAt),
+	})
+}
+
+func (h *AuthHandler) Session(c *fiber.Ctx) error {
+	token := middleware.ExtractToken(c)
+	if token == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	_, expiresAt, err := auth.SessionDetails(c.Context(), h.pool, token)
+	if err != nil {
+		c.Cookie(&fiber.Cookie{Name: "session", Value: "", MaxAge: -1, Path: "/"})
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid session"})
+	}
+	setSessionCookie(c, h.cfg, token, expiresAt)
+	return c.JSON(fiber.Map{
+		"token":    token,
+		"remember": auth.SessionRemembered(expiresAt),
+	})
 }
 
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
@@ -226,6 +248,12 @@ func (h *AuthHandler) DiscordStart(c *fiber.Ctx) error {
 	if !h.discord.Enabled() {
 		return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{"error": "discord oauth not configured"})
 	}
+	if token := middleware.ExtractToken(c); token != "" {
+		if _, expiresAt, err := auth.SessionDetails(c.Context(), h.pool, token); err == nil {
+			setSessionCookie(c, h.cfg, token, expiresAt)
+			return c.Redirect(h.cfg.WebOrigin + "/dashboard?token=" + url.QueryEscape(token))
+		}
+	}
 	state, err := auth.NewToken()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to start oauth"})
@@ -277,14 +305,14 @@ func (h *AuthHandler) DiscordCallback(c *fiber.Ctx) error {
 		return c.Redirect(h.cfg.WebOrigin + "/users/" + url.PathEscape(rec.Username) + "?discord=connected")
 	}
 
-	_, token, err := h.discord.HandleLoginCallback(c.Context(), h.pool, code)
+	_, token, expiresAt, err := h.discord.HandleLoginCallback(c.Context(), h.pool, code)
 	if err != nil {
 		if errors.Is(err, auth.ErrAccountDeactivated) {
 			return c.Redirect(h.cfg.WebOrigin + "/login?error=" + url.QueryEscape("This account has been deactivated. Check your email for a reactivation link."))
 		}
 		return c.Redirect(h.cfg.WebOrigin + "/login?error=" + url.QueryEscape(err.Error()))
 	}
-	setSessionCookie(c, token)
+	setSessionCookie(c, h.cfg, token, expiresAt)
 	return c.Redirect(h.cfg.WebOrigin + "/dashboard?token=" + url.QueryEscape(token))
 }
 
@@ -364,13 +392,15 @@ func (h *AuthHandler) checkTurnstile(c *fiber.Ctx, token string) error {
 	return nil
 }
 
-func setSessionCookie(c *fiber.Ctx, token string) {
+func setSessionCookie(c *fiber.Ctx, cfg config.Config, token string, expiresAt time.Time) {
+	secure := strings.HasPrefix(strings.ToLower(cfg.WebOrigin), "https://")
 	c.Cookie(&fiber.Cookie{
 		Name:     "session",
 		Value:    token,
 		HTTPOnly: true,
+		Secure:   secure,
 		SameSite: "Lax",
 		Path:     "/",
-		MaxAge:   int((7 * 24 * time.Hour).Seconds()),
+		MaxAge:   auth.CookieMaxAge(expiresAt),
 	})
 }

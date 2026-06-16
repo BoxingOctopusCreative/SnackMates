@@ -2,9 +2,14 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AuthProvider } from "@/components/AuthGate";
 import * as apiModule from "@/lib/api";
+import * as sessionModule from "@/lib/session";
 import { mockUser } from "@test/fixtures";
 import { navigationMocks } from "@test/navigation";
 import { renderWithProviders } from "@test/utils";
+
+vi.mock("@/lib/session", () => ({
+  restoreSessionFromCookie: vi.fn(),
+}));
 
 vi.mock("@/components/AppShell", () => ({
   AppShell: ({
@@ -22,6 +27,7 @@ vi.mock("@/components/AppShell", () => ({
 
 describe("AuthProvider", () => {
   it("shows a loading state while fetching the current user", () => {
+    vi.mocked(sessionModule.restoreSessionFromCookie).mockReturnValue(new Promise(() => {}));
     vi.spyOn(apiModule.api, "me").mockReturnValue(new Promise(() => {}));
 
     renderWithProviders(
@@ -34,6 +40,7 @@ describe("AuthProvider", () => {
   });
 
   it("renders children inside the app shell when authenticated", async () => {
+    vi.mocked(sessionModule.restoreSessionFromCookie).mockResolvedValue("token-123");
     vi.spyOn(apiModule.api, "me").mockResolvedValue(mockUser);
 
     renderWithProviders(
@@ -47,6 +54,7 @@ describe("AuthProvider", () => {
   });
 
   it("redirects to login when auth fails", async () => {
+    vi.mocked(sessionModule.restoreSessionFromCookie).mockResolvedValue(null);
     vi.spyOn(apiModule.api, "me").mockRejectedValue(new Error("Unauthorized"));
 
     renderWithProviders(
@@ -63,6 +71,11 @@ describe("AuthProvider", () => {
 
   it("consumes OAuth tokens from the URL", async () => {
     window.history.replaceState({}, "", "/dashboard?token=oauth-token");
+    vi.mocked(sessionModule.restoreSessionFromCookie).mockImplementation(async () => {
+      const token = apiModule.getToken();
+      if (!token) return null;
+      return token;
+    });
     const meSpy = vi.spyOn(apiModule.api, "me").mockResolvedValue(mockUser);
 
     renderWithProviders(
