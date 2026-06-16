@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { Button, Flex, Text, TextField, View } from "@adobe/react-spectrum";
 import { api, ApiError, getToken } from "@/lib/api";
-import type { UnsplashPhoto } from "@/lib/unsplash";
+import { type UnsplashPhoto, UNSPLASH_SEARCH_API_PATH } from "@/lib/unsplash";
 
 type WishlistBannerEditorProps = {
   wishlistSlug: string;
@@ -49,7 +49,7 @@ export function WishlistBannerEditor({
     setSearching(true);
     setSearchError("");
     try {
-      const res = await fetch(`/api/unsplash/search?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`${UNSPLASH_SEARCH_API_PATH}?q=${encodeURIComponent(q)}`);
       const data = (await res.json()) as { results: UnsplashPhoto[] };
       setResults(data.results ?? []);
       if ((data.results ?? []).length === 0) {

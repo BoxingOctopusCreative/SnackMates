@@ -18,7 +18,7 @@ vi.mock("@/components/AuthGate", () => ({
 describe("WishlistDetailPage", () => {
   beforeEach(() => {
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
-      if (String(input).includes("/api/unsplash/random")) {
+      if (String(input).includes("/unsplash/random")) {
         return Promise.resolve({
           ok: true,
           json: async () => ({ photo: null }),

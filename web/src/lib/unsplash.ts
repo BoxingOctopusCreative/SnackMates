@@ -1,5 +1,9 @@
 export const DEFAULT_UNSPLASH_QUERY = "cartoon snack food";
 
+// Next.js routes under /api are routed to the Go API in production (Traefik).
+export const UNSPLASH_RANDOM_API_PATH = "/unsplash/random";
+export const UNSPLASH_SEARCH_API_PATH = "/unsplash/search";
+
 const RANDOM_PHOTO_FALLBACK_QUERIES = ["snack food", "cartoon food", "food"] as const;
 const RANDOM_PHOTO_CACHE_TTL_MS = 60 * 60 * 1000;
 const RANDOM_PHOTO_FAILURE_CACHE_TTL_MS = 5 * 60 * 1000;

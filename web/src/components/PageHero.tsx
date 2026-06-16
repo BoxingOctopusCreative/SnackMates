@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { Flex, Heading, Text } from "@adobe/react-spectrum";
-import { DEFAULT_UNSPLASH_QUERY, type UnsplashPhoto } from "@/lib/unsplash";
+import { DEFAULT_UNSPLASH_QUERY, UNSPLASH_RANDOM_API_PATH, type UnsplashPhoto } from "@/lib/unsplash";
 
 export function usePageHeroBanner(bannerUrl?: string) {
   const [defaultPhoto, setDefaultPhoto] = useState<UnsplashPhoto | null>(null);
@@ -11,7 +11,7 @@ export function usePageHeroBanner(bannerUrl?: string) {
     if (bannerUrl) return;
 
     let cancelled = false;
-    fetch(`/api/unsplash/random?q=${encodeURIComponent(DEFAULT_UNSPLASH_QUERY)}`)
+    fetch(`${UNSPLASH_RANDOM_API_PATH}?q=${encodeURIComponent(DEFAULT_UNSPLASH_QUERY)}`)
       .then((res) => res.json())
       .then((data: { photo: UnsplashPhoto | null }) => {
         if (!cancelled) setDefaultPhoto(data.photo ?? null);
@@ -45,7 +45,7 @@ export function PageHeroBanner({ title, bannerUrl, overlay }: PageHeroBannerProp
     <div className="sm-page-hero__banner-wrap">
       <div
         className={`sm-page-hero__banner${hasBanner ? "" : " sm-page-hero__banner--default"}`}
-        style={hasBanner ? { backgroundImage: `url(${displayUrl})` } : undefined}
+        style={hasBanner ? { backgroundImage: `url("${displayUrl}")` } : undefined}
         role={hasBanner ? "img" : undefined}
         aria-label={hasBanner ? `${title} banner` : undefined}
       />

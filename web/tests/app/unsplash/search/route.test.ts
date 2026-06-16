@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
-import { GET } from "@/app/api/unsplash/search/route";
+import { GET } from "@/app/unsplash/search/route";
 
 vi.mock("@/lib/unsplash", () => ({
   searchUnsplashPhotos: vi.fn(),
@@ -8,9 +8,9 @@ vi.mock("@/lib/unsplash", () => ({
 
 import { searchUnsplashPhotos } from "@/lib/unsplash";
 
-describe("GET /api/unsplash/search", () => {
+describe("GET /unsplash/search", () => {
   it("returns an empty result set for blank queries", async () => {
-    const response = await GET(new NextRequest("http://localhost/api/unsplash/search?q="));
+    const response = await GET(new NextRequest("http://localhost/unsplash/search?q="));
     const body = await response.json();
 
     expect(body).toEqual({ results: [] });
@@ -28,7 +28,7 @@ describe("GET /api/unsplash/search", () => {
     ]);
 
     const response = await GET(
-      new NextRequest("http://localhost/api/unsplash/search?q=  snacks  "),
+      new NextRequest("http://localhost/unsplash/search?q=  snacks  "),
     );
     const body = await response.json();
 

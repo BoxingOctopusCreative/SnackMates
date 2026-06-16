@@ -23,7 +23,7 @@ describe("PageHero", () => {
 
     expect(await screen.findByRole("heading", { name: "Your Wishlists" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Your Wishlists banner" })).toHaveStyle({
-      backgroundImage: "url(https://images.unsplash.com/photo-1)",
+      backgroundImage: 'url("https://images.unsplash.com/photo-1")',
     });
   });
 
