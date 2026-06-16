@@ -48,6 +48,7 @@ type Config struct {
 	OFFBaseURL        string
 	SentryDSN         string
 	SentryEnvironment string
+	TurnstileSecretKey string
 
 	s3UsePathStyleSet          bool
 	s3PresignPrivateObjectsSet bool
@@ -131,6 +132,7 @@ func applyEnv(cfg *Config) {
 
 	cfg.SentryDSN = envString(cfg.SentryDSN, "SENTRY_DSN", "")
 	cfg.SentryEnvironment = envString(cfg.SentryEnvironment, "SENTRY_ENVIRONMENT", "")
+	cfg.TurnstileSecretKey = envString(cfg.TurnstileSecretKey, "TURNSTILE_SECRET_KEY", "")
 }
 
 func envString(current, key, fallback string) string {

@@ -250,13 +250,19 @@ async function request<T>(
 }
 
 export const api = {
-  register(body: { email: string; password: string; display_name: string; country?: string }) {
+  register(body: {
+    email: string;
+    password: string;
+    display_name: string;
+    country?: string;
+    turnstile_token?: string;
+  }) {
     return request<{ user_id: string; message: string }>("/api/v1/auth/register", {
       method: "POST",
       body: JSON.stringify(body),
     });
   },
-  login(body: { email: string; password: string; totp_code?: string }) {
+  login(body: { email: string; password: string; totp_code?: string; turnstile_token?: string }) {
     return request<{ token?: string; mfa_required?: boolean; methods?: string[] }>(
       "/api/v1/auth/login",
       { method: "POST", body: JSON.stringify(body) },

@@ -44,6 +44,7 @@ services:
       MAILGUN_DOMAIN: notifications.snackmates.food
       MAILGUN_API_BASE_URL: https://api.mailgun.net
       EMAIL_FROM: notifications@snackmates.food
+      TURNSTILE_SECRET_KEY: $TURNSTILE_SECRET_KEY
     restart: unless-stopped
     depends_on:
       - meilisearch
@@ -77,6 +78,7 @@ services:
       NEXT_PUBLIC_API_URL: https://snackmates.food
       NEXT_PUBLIC_APP_URL: https://snackmates.food
       NEXT_PUBLIC_SENTRY_DSN: $NEXT_PUBLIC_SENTRY_DSN
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: $NEXT_PUBLIC_TURNSTILE_SITE_KEY
       UNSPLASH_ACCESS_KEY: $UNSPLASH_ACCESS_KEY
     depends_on:
       - api

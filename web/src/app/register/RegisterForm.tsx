@@ -14,7 +14,9 @@ import {
 } from "@adobe/react-spectrum";
 import { AuthPageShell } from "@/components/AuthPageShell";
 import { DiscordOAuthButton } from "@/components/DiscordOAuthButton";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { api, discordUrl } from "@/lib/api";
+import { turnstileEnabled } from "@/lib/turnstile";
 import { COUNTRIES } from "@/lib/countries";
 import type { UnsplashPhoto } from "@/lib/unsplash";
 
@@ -26,16 +28,36 @@ export function RegisterForm({ background }: { background: UnsplashPhoto | null 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const turnstileOn = turnstileEnabled();
+
+  function resetTurnstile() {
+    setTurnstileToken("");
+    setTurnstileResetKey((key) => key + 1);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (turnstileOn && !turnstileToken) {
+      setError("Please complete the security check.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
-      const res = await api.register({ email, password, display_name: displayName, country });
+      const res = await api.register({
+        email,
+        password,
+        display_name: displayName,
+        country,
+        turnstile_token: turnstileToken || undefined,
+      });
       setMessage(res.message);
+      resetTurnstile();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
+      resetTurnstile();
     } finally {
       setLoading(false);
     }
@@ -60,7 +82,19 @@ export function RegisterForm({ background }: { background: UnsplashPhoto | null 
           <TextField label="Password" type="password" value={password} onChange={setPassword} isRequired />
           {error && <Text UNSAFE_style={{ color: "var(--sm-error)" }}>{error}</Text>}
           {message && <Text UNSAFE_style={{ color: "#12805c" }}>{message}</Text>}
-          <Button type="submit" variant="accent" isDisabled={loading}>
+          {turnstileOn && (
+            <TurnstileWidget
+              resetKey={turnstileResetKey}
+              onToken={setTurnstileToken}
+              onExpire={resetTurnstile}
+              onError={resetTurnstile}
+            />
+          )}
+          <Button
+            type="submit"
+            variant="accent"
+            isDisabled={loading || (turnstileOn && !turnstileToken)}
+          >
             {loading ? "Creating account..." : "Create account"}
           </Button>
         </Flex>

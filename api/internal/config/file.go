@@ -24,6 +24,7 @@ type fileConfig struct {
 	OVHAI      ovhAIFileConfig      `toml:"ovh_ai"`
 	OpenFoodFacts openFoodFactsFileConfig `toml:"openfoodfacts"`
 	Sentry        sentryFileConfig          `toml:"sentry"`
+	Turnstile     turnstileFileConfig       `toml:"turnstile"`
 }
 
 type serverFileConfig struct {
@@ -109,6 +110,10 @@ type sentryFileConfig struct {
 	Environment string `toml:"environment"`
 }
 
+type turnstileFileConfig struct {
+	SecretKey string `toml:"secret_key"`
+}
+
 func loadFile(path string) (Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -189,6 +194,7 @@ func applyFile(cfg *Config, file fileConfig) {
 
 	setString(&cfg.SentryDSN, file.Sentry.DSN)
 	setString(&cfg.SentryEnvironment, file.Sentry.Environment)
+	setString(&cfg.TurnstileSecretKey, file.Turnstile.SecretKey)
 }
 
 func setString(dst *string, value string) {

@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/boxingoctopus/snackmates/api/internal/auth"
@@ -10,6 +11,7 @@ import (
 	"github.com/boxingoctopus/snackmates/api/internal/config"
 	"github.com/boxingoctopus/snackmates/api/internal/middleware"
 	"github.com/boxingoctopus/snackmates/api/internal/storage"
+	"github.com/boxingoctopus/snackmates/api/internal/turnstile"
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -57,17 +59,21 @@ func (h *AuthHandler) RegisterRoutes(app fiber.Router) {
 }
 
 type registerRequest struct {
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	DisplayName string `json:"display_name"`
-	Username    string `json:"username"`
-	Country     string `json:"country"`
+	Email          string `json:"email"`
+	Password       string `json:"password"`
+	DisplayName    string `json:"display_name"`
+	Username       string `json:"username"`
+	Country        string `json:"country"`
+	TurnstileToken string `json:"turnstile_token"`
 }
 
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req registerRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
+	}
+	if err := h.checkTurnstile(c, req.TurnstileToken); err != nil {
+		return err
 	}
 	if req.Email == "" || req.Password == "" || req.DisplayName == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "email, password, and display_name required"})
@@ -80,15 +86,19 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 }
 
 type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	TOTPCode string `json:"totp_code"`
+	Email          string `json:"email"`
+	Password       string `json:"password"`
+	TOTPCode       string `json:"totp_code"`
+	TurnstileToken string `json:"turnstile_token"`
 }
 
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var req loginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request"})
+	}
+	if err := h.checkTurnstile(c, req.TurnstileToken); err != nil {
+		return err
 	}
 	userID, token, totpRequired, err := auth.Login(c.Context(), h.pool, req.Email, req.Password)
 	if err != nil {
@@ -340,6 +350,18 @@ func (h *AuthHandler) WebAuthnLoginBegin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(resp)
+}
+
+func (h *AuthHandler) checkTurnstile(c *fiber.Ctx, token string) error {
+	if strings.TrimSpace(h.cfg.TurnstileSecretKey) == "" {
+		return nil
+	}
+	if err := turnstile.Verify(c.Context(), h.cfg.TurnstileSecretKey, token, c.IP()); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Security verification failed. Please try again.",
+		})
+	}
+	return nil
 }
 
 func setSessionCookie(c *fiber.Ctx, token string) {

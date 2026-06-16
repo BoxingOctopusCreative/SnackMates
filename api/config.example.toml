@@ -57,6 +57,9 @@ client_id = ""
 client_secret = ""
 redirect_uri = "http://localhost:8080/api/v1/auth/discord/callback"
 
+[turnstile]
+# secret_key = ""
+
 [webauthn]
 rp_id = "localhost"
 rp_origin = "http://localhost:3000"

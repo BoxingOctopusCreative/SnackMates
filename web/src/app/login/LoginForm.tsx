@@ -13,7 +13,9 @@ import {
 } from "@adobe/react-spectrum";
 import { AuthPageShell } from "@/components/AuthPageShell";
 import { DiscordOAuthButton } from "@/components/DiscordOAuthButton";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { ApiError, api, discordUrl, saveToken } from "@/lib/api";
+import { turnstileEnabled } from "@/lib/turnstile";
 import type { UnsplashPhoto } from "@/lib/unsplash";
 
 export function LoginForm({ background }: { background: UnsplashPhoto | null }) {
@@ -27,6 +29,14 @@ export function LoginForm({ background }: { background: UnsplashPhoto | null }) 
   const [accountDeactivated, setAccountDeactivated] = useState(false);
   const [reactivateMessage, setReactivateMessage] = useState("");
   const [reactivateLoading, setReactivateLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const turnstileOn = turnstileEnabled();
+
+  function resetTurnstile() {
+    setTurnstileToken("");
+    setTurnstileResetKey((key) => key + 1);
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -42,14 +52,24 @@ export function LoginForm({ background }: { background: UnsplashPhoto | null }) 
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (turnstileOn && !turnstileToken) {
+      setError("Please complete the security check.");
+      return;
+    }
     setLoading(true);
     setError("");
     setAccountDeactivated(false);
     setReactivateMessage("");
     try {
-      const res = await api.login({ email, password, totp_code: totpCode || undefined });
+      const res = await api.login({
+        email,
+        password,
+        totp_code: totpCode || undefined,
+        turnstile_token: turnstileToken || undefined,
+      });
       if (res.mfa_required) {
         setMfaRequired(true);
+        resetTurnstile();
         return;
       }
       if (res.token) {
@@ -64,6 +84,7 @@ export function LoginForm({ background }: { background: UnsplashPhoto | null }) 
         setAccountDeactivated(false);
         setError(err instanceof Error ? err.message : "Login failed");
       }
+      resetTurnstile();
     } finally {
       setLoading(false);
     }
@@ -108,7 +129,19 @@ export function LoginForm({ background }: { background: UnsplashPhoto | null }) 
               {reactivateLoading ? "Sending..." : "Send Reactivation Email"}
             </Button>
           )}
-          <Button type="submit" variant="accent" isDisabled={loading}>
+          {turnstileOn && (
+            <TurnstileWidget
+              resetKey={turnstileResetKey}
+              onToken={setTurnstileToken}
+              onExpire={resetTurnstile}
+              onError={resetTurnstile}
+            />
+          )}
+          <Button
+            type="submit"
+            variant="accent"
+            isDisabled={loading || (turnstileOn && !turnstileToken)}
+          >
             {loading ? "Signing in..." : "Sign in"}
           </Button>
         </Flex>
