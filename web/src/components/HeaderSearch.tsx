@@ -66,7 +66,6 @@ function HeaderSearchField({ onSubmitComplete }: { onSubmitComplete?: () => void
   return (
     <SearchField
       aria-label="Search SnackMates"
-      placeholder="Search SnackMates..."
       value={query}
       onChange={setQuery}
       onSubmit={submit}
