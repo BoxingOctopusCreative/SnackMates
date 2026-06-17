@@ -17,7 +17,7 @@ require (
 	github.com/meilisearch/meilisearch-go v0.31.0
 	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/pquerna/otp v1.4.0
-	github.com/redis/go-redis/v9 v9.7.1
+	github.com/redis/go-redis/v9 v9.7.3
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.45.0
 	golang.org/x/oauth2 v0.30.0
