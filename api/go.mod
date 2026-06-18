@@ -10,7 +10,7 @@ require (
 	github.com/getsentry/sentry-go v0.46.2
 	github.com/getsentry/sentry-go/fiber v0.46.2
 	github.com/go-webauthn/webauthn v0.12.3
-	github.com/gofiber/fiber/v2 v2.52.12
+	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.2
