@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -286,7 +287,8 @@ func (h *AuthHandler) DiscordCallback(c *fiber.Ctx) error {
 	state := c.Query("state")
 	purpose, err := auth.ConsumeOAuthState(h.cache, state)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid oauth state"})
+		log.Printf("discord oauth state invalid: %v", err)
+		return c.Redirect(h.cfg.WebOrigin + "/login?error=" + url.QueryEscape("Sign-in session expired. Please try again."))
 	}
 	code := c.Query("code")
 
@@ -384,9 +386,17 @@ func (h *AuthHandler) checkTurnstile(c *fiber.Ctx, token string) error {
 	if strings.TrimSpace(h.cfg.TurnstileSecretKey) == "" {
 		return nil
 	}
+	if strings.TrimSpace(token) == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Security check is required. Refresh the page and try again.",
+			"code":  "turnstile_required",
+		})
+	}
 	if err := turnstile.Verify(c.Context(), h.cfg.TurnstileSecretKey, token, c.IP()); err != nil {
+		log.Printf("turnstile verification failed (ip=%s): %v", c.IP(), err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Security verification failed. Please try again.",
+			"code":  "turnstile_failed",
 		})
 	}
 	return nil

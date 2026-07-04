@@ -96,10 +96,13 @@ func run(configFile string) error {
 	}
 
 	app := fiber.New(fiber.Config{
-		AppName:      "SnackMates API",
-		BodyLimit:    10 * 1024 * 1024,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 0,
+		AppName:                 "SnackMates API",
+		BodyLimit:               10 * 1024 * 1024,
+		ReadTimeout:             15 * time.Second,
+		WriteTimeout:            0,
+		ProxyHeader:             fiber.HeaderXForwardedFor,
+		EnableTrustedProxyCheck: true,
+		TrustedProxies:          []string{"0.0.0.0/0", "::/0"},
 	})
 
 	app.Use(recover.New())

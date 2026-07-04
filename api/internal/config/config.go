@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -184,6 +185,9 @@ func (c Config) Validate() error {
 	}
 	if strings.TrimSpace(c.DatabaseURL) == "" {
 		return fmt.Errorf("database url must not be empty")
+	}
+	if strings.TrimSpace(c.TurnstileSecretKey) != "" {
+		log.Printf("WARNING: TURNSTILE_SECRET_KEY is set; login/register require a valid turnstile_token from the web app")
 	}
 	return nil
 }

@@ -242,9 +242,18 @@ async function request<T>(
     credentials: "include",
   });
 
-  const data = await res.json().catch(() => ({}));
+  let data: { error?: string; code?: string } = {};
+  try {
+    data = await res.json();
+  } catch {
+    // Response body was not JSON (e.g. proxy error page).
+  }
   if (!res.ok) {
-    throw new ApiError(res.status, data.error ?? res.statusText, data.code);
+    const fallback =
+      res.status === 400
+        ? "Request rejected. Check your input and try again."
+        : res.statusText;
+    throw new ApiError(res.status, data.error ?? fallback, data.code);
   }
   return data as T;
 }
