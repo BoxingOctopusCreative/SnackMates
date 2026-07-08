@@ -67,6 +67,9 @@ services:
       - traefik.http.middlewares.snackmates-api.headers.SSLHost=snackmates.food
       - traefik.http.middlewares.snackmates-api.headers.STSIncludeSubdomains=true
       - traefik.http.middlewares.snackmates-api.headers.STSPreload=true
+      - wud.watch=true
+      - wud.tag.include=^\d+\.\d+\.\d+$      # only track real semver tags
+      - wud.trigger.include=docker.autoupdate
 
   web:
     image: ghcr.io/boxingoctopuscreative/snackmates-web:latest
@@ -100,9 +103,12 @@ services:
       - traefik.http.middlewares.snackmates-web.headers.SSLHost=snackmates.food
       - traefik.http.middlewares.snackmates-web.headers.STSIncludeSubdomains=true
       - traefik.http.middlewares.snackmates-web.headers.STSPreload=true
+      - wud.watch=true
+      - wud.tag.include=^\d+\.\d+\.\d+$      # only track real semver tags
+      - wud.trigger.include=docker.autoupdate
 
   meilisearch:
-    image: getmeili/meilisearch:v1.12
+    image: getmeili/meilisearch:latest
     environment:
       MEILI_ENV: production
       MEILI_MASTER_KEY: $MEILI_MASTER_KEY
@@ -111,10 +117,11 @@ services:
     networks:
       - shared-network
     volumes:
-      - meilisearch_data:/meili_data
-
-volumes:
-  meilisearch_data:
+      - /mnt/portainer_ext_vol_01/snackmates/meilisearch:/meili_data
+    labels:
+      - wud.watch=true
+      - wud.tag.include=^\d+\.\d+\.\d+$      # only track real semver tags
+      - wud.trigger.include=docker.autoupdate
 
 networks:
   shared-network:
