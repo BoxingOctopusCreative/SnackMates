@@ -1,4 +1,4 @@
-thereservices:
+services:
   api:
     image: ghcr.io/boxingoctopuscreative/snackmates-api:latest
     expose:
