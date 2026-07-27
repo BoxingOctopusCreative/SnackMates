@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_URL, api, getToken } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
 import {
   findNewAcceptedNotifications,
   notificationKey,
   notifySnackMateAccepted,
 } from "@/lib/notification-alerts";
+import { subscribeRealtimeStream } from "@/lib/realtime-stream";
 
 export const NOTIFICATIONS_CHANGED = "snackmates:notifications-changed";
 
@@ -16,24 +17,21 @@ export function notifyNotificationsChanged() {
   }
 }
 
-function notificationStreamUrl(token: string) {
-  const params = new URLSearchParams({ access_token: token });
-  return `${API_URL}/api/v1/notifications/stream?${params.toString()}`;
-}
-
 export function useNotifications(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
 
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const sourceRef = useRef<EventSource | null>(null);
   const seenRef = useRef<Set<string>>(new Set());
   const initializedRef = useRef(false);
+  const loadGenerationRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!enabled) return;
+    const generation = ++loadGenerationRef.current;
     try {
       const data = await api.notifications(getToken());
+      if (generation !== loadGenerationRef.current) return;
       const nextItems = data.items;
       const accepted = findNewAcceptedNotifications(
         seenRef.current,
@@ -48,6 +46,7 @@ export function useNotifications(options?: { enabled?: boolean }) {
       initializedRef.current = true;
       setItems(nextItems);
     } catch {
+      if (generation !== loadGenerationRef.current) return;
       seenRef.current = new Set();
       initializedRef.current = true;
       setItems([]);
@@ -71,36 +70,20 @@ export function useNotifications(options?: { enabled?: boolean }) {
 
     const onChange = () => load();
     window.addEventListener(NOTIFICATIONS_CHANGED, onChange);
-
-    function connectStream() {
-      const token = getToken();
-      if (!token) return;
-
-      sourceRef.current?.close();
-      const source = new EventSource(notificationStreamUrl(token));
-      sourceRef.current = source;
-
-      source.addEventListener("refresh", () => {
-        notifyNotificationsChanged();
-      });
-    }
-
-    connectStream();
+    const unsubscribe = subscribeRealtimeStream(notifyNotificationsChanged);
 
     function onVisibilityChange() {
-      if (document.visibilityState !== "visible") return;
-      load();
-      if (!sourceRef.current || sourceRef.current.readyState === EventSource.CLOSED) {
-        connectStream();
+      if (document.visibilityState === "visible") {
+        load();
       }
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
+      loadGenerationRef.current += 1;
       window.removeEventListener(NOTIFICATIONS_CHANGED, onChange);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      sourceRef.current?.close();
-      sourceRef.current = null;
+      unsubscribe();
     };
   }, [enabled, load]);
 

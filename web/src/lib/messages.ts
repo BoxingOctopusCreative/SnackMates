@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_URL, api, Conversation, getToken, Message } from "@/lib/api";
+import { api, Conversation, getToken, Message } from "@/lib/api";
+import { subscribeRealtimeStream } from "@/lib/realtime-stream";
 
 export const MESSAGES_CHANGED = "snackmates:messages-changed";
 
@@ -9,26 +10,24 @@ export function notifyMessagesChanged() {
   }
 }
 
-function messageStreamUrl(token: string) {
-  const params = new URLSearchParams({ access_token: token });
-  return `${API_URL}/api/v1/notifications/stream?${params.toString()}`;
-}
-
 export function useMessages(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const sourceRef = useRef<EventSource | null>(null);
+  const loadGenerationRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!enabled) return;
+    const generation = ++loadGenerationRef.current;
     try {
       const data = await api.conversations(getToken());
+      if (generation !== loadGenerationRef.current) return;
       setConversations(data.conversations);
       setUnreadCount(data.unread_count);
     } catch {
+      if (generation !== loadGenerationRef.current) return;
       setConversations([]);
       setUnreadCount(0);
     }
@@ -51,36 +50,20 @@ export function useMessages(options?: { enabled?: boolean }) {
 
     const onChange = () => load();
     window.addEventListener(MESSAGES_CHANGED, onChange);
-
-    function connectStream() {
-      const token = getToken();
-      if (!token) return;
-
-      sourceRef.current?.close();
-      const source = new EventSource(messageStreamUrl(token));
-      sourceRef.current = source;
-
-      source.addEventListener("refresh", () => {
-        notifyMessagesChanged();
-      });
-    }
-
-    connectStream();
+    const unsubscribe = subscribeRealtimeStream(notifyMessagesChanged);
 
     function onVisibilityChange() {
-      if (document.visibilityState !== "visible") return;
-      load();
-      if (!sourceRef.current || sourceRef.current.readyState === EventSource.CLOSED) {
-        connectStream();
+      if (document.visibilityState === "visible") {
+        load();
       }
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
+      loadGenerationRef.current += 1;
       window.removeEventListener(MESSAGES_CHANGED, onChange);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      sourceRef.current?.close();
-      sourceRef.current = null;
+      unsubscribe();
     };
   }, [enabled, load]);
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_URL, api, Chat, ChatMessage, getToken } from "@/lib/api";
+import { api, Chat, ChatMessage, getToken } from "@/lib/api";
+import { subscribeRealtimeStream } from "@/lib/realtime-stream";
 
 export const CHATS_CHANGED = "snackmates:chats-changed";
 
@@ -18,26 +19,24 @@ export function notifyChatsChanged(detail?: ChatsChangedDetail) {
   }
 }
 
-function chatStreamUrl(token: string) {
-  const params = new URLSearchParams({ access_token: token });
-  return `${API_URL}/api/v1/notifications/stream?${params.toString()}`;
-}
-
 export function useChats(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;
 
   const [chats, setChats] = useState<Chat[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const sourceRef = useRef<EventSource | null>(null);
+  const loadGenerationRef = useRef(0);
 
   const load = useCallback(async () => {
     if (!enabled) return;
+    const generation = ++loadGenerationRef.current;
     try {
       const data = await api.chats(getToken());
+      if (generation !== loadGenerationRef.current) return;
       setChats(data.chats);
       setUnreadCount(data.unread_count);
     } catch {
+      if (generation !== loadGenerationRef.current) return;
       setChats([]);
       setUnreadCount(0);
     }
@@ -60,36 +59,20 @@ export function useChats(options?: { enabled?: boolean }) {
 
     const onChange = () => load();
     window.addEventListener(CHATS_CHANGED, onChange);
-
-    function connectStream() {
-      const token = getToken();
-      if (!token) return;
-
-      sourceRef.current?.close();
-      const source = new EventSource(chatStreamUrl(token));
-      sourceRef.current = source;
-
-      source.addEventListener("refresh", () => {
-        notifyChatsChanged();
-      });
-    }
-
-    connectStream();
+    const unsubscribe = subscribeRealtimeStream(notifyChatsChanged);
 
     function onVisibilityChange() {
-      if (document.visibilityState !== "visible") return;
-      load();
-      if (!sourceRef.current || sourceRef.current.readyState === EventSource.CLOSED) {
-        connectStream();
+      if (document.visibilityState === "visible") {
+        load();
       }
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
+      loadGenerationRef.current += 1;
       window.removeEventListener(CHATS_CHANGED, onChange);
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      sourceRef.current?.close();
-      sourceRef.current = null;
+      unsubscribe();
     };
   }, [enabled, load]);
 

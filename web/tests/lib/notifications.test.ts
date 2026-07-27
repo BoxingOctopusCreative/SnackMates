@@ -1,16 +1,24 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
+import { useChats } from "@/lib/chats";
+import { useMessages } from "@/lib/messages";
 import {
   NOTIFICATIONS_CHANGED,
   notifyNotificationsChanged,
   useNotifications,
 } from "@/lib/notifications";
+import {
+  resetRealtimeStreamForTests,
+  realtimeStreamConnectionCountForTests,
+} from "@/lib/realtime-stream";
 
 vi.mock("@/lib/api", () => ({
   API_URL: "http://localhost:8080",
   api: {
     notifications: vi.fn(),
+    conversations: vi.fn(),
+    chats: vi.fn(),
   },
   getToken: vi.fn(() => "token"),
 }));
@@ -73,11 +81,15 @@ class MockEventSource {
 describe("useNotifications", () => {
   beforeEach(() => {
     MockEventSource.instances = [];
+    resetRealtimeStreamForTests();
     vi.stubGlobal("EventSource", MockEventSource);
     vi.mocked(api.notifications).mockResolvedValue(sampleNotifications);
+    vi.mocked(api.conversations).mockResolvedValue({ conversations: [], unread_count: 0 });
+    vi.mocked(api.chats).mockResolvedValue({ chats: [], unread_count: 0 });
   });
 
   afterEach(() => {
+    resetRealtimeStreamForTests();
     vi.clearAllMocks();
     vi.unstubAllGlobals();
   });
@@ -126,6 +138,35 @@ describe("useNotifications", () => {
     await waitFor(() => {
       expect(api.notifications).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("shares one EventSource across notifications, messages, and chats", async () => {
+    const { unmount: unmountNotifications } = renderHook(() => useNotifications());
+    const { unmount: unmountMessages } = renderHook(() => useMessages());
+    const { unmount: unmountChats } = renderHook(() => useChats());
+
+    await waitFor(() => {
+      expect(MockEventSource.instances).toHaveLength(1);
+      expect(realtimeStreamConnectionCountForTests()).toBe(1);
+    });
+
+    const source = MockEventSource.instances[0];
+    act(() => {
+      source?.emit("refresh");
+    });
+
+    await waitFor(() => {
+      expect(api.notifications).toHaveBeenCalledTimes(2);
+      expect(api.conversations).toHaveBeenCalledTimes(2);
+      expect(api.chats).toHaveBeenCalledTimes(2);
+    });
+
+    unmountNotifications();
+    unmountMessages();
+    expect(realtimeStreamConnectionCountForTests()).toBe(1);
+
+    unmountChats();
+    expect(realtimeStreamConnectionCountForTests()).toBe(0);
   });
 
   it("dispatches the notifications changed event", () => {

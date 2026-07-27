@@ -1,27 +1,31 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import { useMessages } from "@/lib/messages";
+import { Conversation, useMessages } from "@/lib/messages";
 
 type MessagesContextValue = {
+  conversations: Conversation[];
   unreadCount: number;
   loading: boolean;
   refresh: () => Promise<void>;
+  load: () => Promise<void>;
 };
 
 const MessagesContext = createContext<MessagesContextValue | null>(null);
 
-/** Inbox unread badge for the header mail icon only. */
+/** Shared inbox state + single realtime subscription for the mail icon and /messages. */
 export function MessagesProvider({ children }: { children: React.ReactNode }) {
-  const { unreadCount, loading, refresh } = useMessages();
+  const { conversations, unreadCount, loading, refresh, load } = useMessages();
 
   const value = useMemo(
     () => ({
+      conversations,
       unreadCount,
       loading,
       refresh,
+      load,
     }),
-    [unreadCount, loading, refresh],
+    [conversations, unreadCount, loading, refresh, load],
   );
 
   return <MessagesContext.Provider value={value}>{children}</MessagesContext.Provider>;

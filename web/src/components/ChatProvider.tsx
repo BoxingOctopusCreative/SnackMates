@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useCurrentUserId } from "@/components/ConversationThread";
 import {
   CHATS_CHANGED,
@@ -34,21 +42,27 @@ const ChatContext = createContext<ChatContextValue | null>(null);
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const currentUserId = useCurrentUserId();
   const { chats, unreadCount, loading, refresh, load } = useChats();
+  const chatsRef = useRef(chats);
+  chatsRef.current = chats;
+
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [activeMessages, setActiveMessages] = useState<ChatMessage[]>([]);
   const [activeOtherUser, setActiveOtherUser] = useState<Chat["other_user"] | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  const threadLoadGenerationRef = useRef(0);
 
   const openChat = useCallback(
     async (chatId: string) => {
+      const generation = ++threadLoadGenerationRef.current;
       const data = await fetchChatMessages(chatId);
-      const fromList = chats.find((c) => c.id === chatId)?.other_user;
+      if (generation !== threadLoadGenerationRef.current) return;
+      const fromList = chatsRef.current.find((c) => c.id === chatId)?.other_user;
       setActiveChatId(chatId);
       setActiveMessages(data.messages);
       setActiveOtherUser(data.chat.other_user ?? fromList ?? null);
       await load();
     },
-    [chats, load],
+    [load],
   );
 
   const startChat = useCallback(
@@ -87,6 +101,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   );
 
   const closeChat = useCallback(() => {
+    threadLoadGenerationRef.current += 1;
     setActiveChatId(null);
     setActiveMessages([]);
     setActiveOtherUser(null);
@@ -98,9 +113,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const chatId = activeChatId;
 
     async function reloadActiveChat() {
+      const generation = ++threadLoadGenerationRef.current;
       try {
         const data = await fetchChatMessages(chatId);
-        const fromList = chats.find((c) => c.id === chatId)?.other_user;
+        if (generation !== threadLoadGenerationRef.current) return;
+        const fromList = chatsRef.current.find((c) => c.id === chatId)?.other_user;
         setActiveMessages(data.messages);
         setActiveOtherUser(data.chat.other_user ?? fromList ?? null);
       } catch {
@@ -115,8 +132,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     window.addEventListener(CHATS_CHANGED, onChatsChanged);
-    return () => window.removeEventListener(CHATS_CHANGED, onChatsChanged);
-  }, [chatOpen, activeChatId, chats]);
+    return () => {
+      threadLoadGenerationRef.current += 1;
+      window.removeEventListener(CHATS_CHANGED, onChatsChanged);
+    };
+  }, [chatOpen, activeChatId]);
 
   const value = useMemo(
     () => ({

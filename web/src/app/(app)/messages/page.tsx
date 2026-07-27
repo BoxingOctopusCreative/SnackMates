@@ -22,12 +22,12 @@ import { PageHero } from "@/components/PageHero";
 import { DirectMessageList } from "@/components/DirectMessageList";
 import { DirectMessageThread } from "@/components/DirectMessageThread";
 import { useCurrentUserId } from "@/components/ConversationThread";
+import { useMessagesInbox } from "@/components/MessagesProvider";
 import {
   fetchConversationMessages,
   notifyMessagesChanged,
   openConversationWith,
   postMessage,
-  useMessages,
 } from "@/lib/messages";
 
 export default function MessagesPage() {
@@ -40,7 +40,7 @@ export default function MessagesPage() {
 
 function MessagesContent() {
   const searchParams = useSearchParams();
-  const { conversations, loading, refresh } = useMessages();
+  const { conversations, loading, refresh } = useMessagesInbox();
   const currentUserId = useCurrentUserId();
   const [mates, setMates] = useState<Friendship[]>([]);
   const [selectedMate, setSelectedMate] = useState<string | null>(null);
